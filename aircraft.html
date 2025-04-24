@@ -74,9 +74,14 @@
             left: 0;
             right: 0;
             display: none;
-            justify-content: space-between;
-            padding: 0 20px;
+            flex-direction: column;
+            align-items: center;
             z-index: 99;
+        }
+        .mobile-row {
+            display: flex;
+            justify-content: center;
+            margin: 5px 0;
         }
         .mobile-btn {
             width: 70px;
@@ -90,6 +95,7 @@
             font-size: 24px;
             border: 2px solid rgba(255,255,255,0.5);
             touch-action: manipulation;
+            margin: 0 10px;
         }
     </style>
 </head>
@@ -103,9 +109,17 @@
         <button id="restart">重新開始</button>
         <div id="controlsInfo"></div>
         <div id="mobileControls">
-            <div id="leftBtn" class="mobile-btn">←</div>
-            <div id="rightBtn" class="mobile-btn">→</div>
-            <div id="shootBtn" class="mobile-btn">射擊</div>
+            <div class="mobile-row">
+                <div id="upBtn" class="mobile-btn">↑</div>
+            </div>
+            <div class="mobile-row">
+                <div id="leftBtn" class="mobile-btn">←</div>
+                <div id="shootBtn" class="mobile-btn">射擊</div>
+                <div id="rightBtn" class="mobile-btn">→</div>
+            </div>
+            <div class="mobile-row">
+                <div id="downBtn" class="mobile-btn">↓</div>
+            </div>
         </div>
     </div>
 
@@ -220,13 +234,13 @@
             }
         }
 
-        // 玩家飛機 (調整移動速度為3，原本是6)
+        // 玩家飛機 (移動速度已調整為3)
         const player = {
             x: 0,
             y: 0,
             width: 60,
             height: 60,
-            speed: 3, // 這裡將速度從6改為3
+            speed: 3,
             isAlive: true,
             lastShot: 0,
             shotDelay: 150,
@@ -392,28 +406,49 @@
             }
         });
 
-        // 觸控控制（手機版）
+        // 觸控控制（手機版） - 新增上下控制
         if (isMobile) {
+            // 左
             document.getElementById('leftBtn').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 keys.ArrowLeft = true;
             });
-            
             document.getElementById('leftBtn').addEventListener('touchend', (e) => {
                 e.preventDefault();
                 keys.ArrowLeft = false;
             });
             
+            // 右
             document.getElementById('rightBtn').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 keys.ArrowRight = true;
             });
-            
             document.getElementById('rightBtn').addEventListener('touchend', (e) => {
                 e.preventDefault();
                 keys.ArrowRight = false;
             });
             
+            // 上
+            document.getElementById('upBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys.ArrowUp = true;
+            });
+            document.getElementById('upBtn').addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys.ArrowUp = false;
+            });
+            
+            // 下
+            document.getElementById('downBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys.ArrowDown = true;
+            });
+            document.getElementById('downBtn').addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys.ArrowDown = false;
+            });
+            
+            // 射擊
             document.getElementById('shootBtn').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 player.shoot();
