@@ -106,7 +106,7 @@
             align-items: center;
         }
         
-        #startScreen, #gameOverScreen, #orientationWarning {
+        #startScreen, #gameOverScreen {
             position: absolute;
             width: 100%;
             height: 100%;
@@ -118,7 +118,7 @@
             z-index: 30;
         }
         
-        #gameOverScreen, #orientationWarning {
+        #gameOverScreen {
             display: none;
         }
         
@@ -252,11 +252,6 @@
             <div id="finalTime" style="color: white; font-size: 24px; margin-bottom: 20px;">存活時間: 0秒</div>
             <button id="restartBtn" class="btn">再玩一次</button>
         </div>
-        
-        <div id="orientationWarning">
-            <h1 class="title">請將手機橫放</h1>
-            <p style="color: white; font-size: 20px; text-align: center;">為獲得最佳遊戲體驗，請將手機旋轉至橫向模式</p>
-        </div>
     </div>
 
     <!-- 音效檔案 -->
@@ -299,7 +294,6 @@
         const jumpSound = document.getElementById('jumpSound');
         const deathSound = document.getElementById('deathSound');
         const platformHint = document.getElementById('platformHint');
-        const orientationWarning = document.getElementById('orientationWarning');
         const muteBtn = document.getElementById('muteBtn');
         
         // 靜音/取消靜音功能
@@ -324,24 +318,9 @@
             isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
             if (isMobile) {
-                platformHint.innerHTML = '點擊屏幕跳躍<br>請將手機橫放遊玩';
-                checkOrientation();
-                window.addEventListener('resize', checkOrientation);
+                platformHint.innerHTML = '點擊屏幕跳躍';
             } else {
                 platformHint.textContent = '按空格鍵跳躍';
-            }
-        }
-        
-        // 檢查手機方向
-        function checkOrientation() {
-            if (!isMobile) return;
-            
-            const isPortrait = window.innerHeight > window.innerWidth;
-            
-            if (isPortrait && !gameRunning) {
-                orientationWarning.style.display = 'flex';
-            } else {
-                orientationWarning.style.display = 'none';
             }
         }
         
@@ -389,15 +368,6 @@
         
         // 開始遊戲
         function startGame() {
-            // 如果是手機且是豎屏，顯示提示並不開始遊戲
-            if (isMobile) {
-                const isPortrait = window.innerHeight > window.innerWidth;
-                if (isPortrait) {
-                    orientationWarning.style.display = 'flex';
-                    return;
-                }
-            }
-            
             gameRunning = true;
             lives = 3;
             obstacles = [];
@@ -418,7 +388,6 @@
             // 隱藏開始畫面
             startScreen.style.display = 'none';
             gameOverScreen.style.display = 'none';
-            orientationWarning.style.display = 'none';
             
             // 播放背景音樂
             bgMusic.currentTime = 0;
