@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>森林酷跑遊戲</title>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 100%;
+            max-height: 400px;
+            background-color: #87CEEB;
+            overflow: hidden;
+            border: 3px solid #333;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        #ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100px;
+            background-color: #4CAF50;
+        }
+        
+        #player {
+            position: absolute;
+            width: 60px;
+            height: 80px;
+            bottom: 60px;
+            left: 100px;
+            background-image: url('trolly.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            z-index: 10;
+            transition: transform 0.1s;
+        }
+        
+        .obstacle {
+            position: absolute;
+            width: 40px;
+            bottom: 60px;
+            background-color: #8B4513;
+            border-radius: 10px;
+            z-index: 5;
+        }
+        
+        #timeDisplay {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 2px 2px 4px #000;
+            z-index: 20;
+        }
+        
+        #livesDisplay {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 2px 2px 4px #000;
+            z-index: 20;
+        }
+        
+        #muteBtn {
+            position: absolute;
+            top: 10px;
+            right: 120px;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+        }
+        
+        #gameOverScreen {
+            display: none;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            font-size: 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+        
+        .title {
+            color: white;
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px #000;
+            text-align: center;
+        }
+        
+        .tree {
+            position: absolute;
+            bottom: 60px;
+            width: 60px;
+            height: 120px;
+            background-color: #228B22;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+        
+        .cloud {
+            position: absolute;
+            width: 100px;
+            height: 50px;
+            background-color: white;
+            border-radius: 50px;
+            opacity: 0.8;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            font-size: 16px;
+            z-index: 20;
+        }
+        
+        #mobileControls {
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px #000;
+            z-index: 20;
+        }
+        
+        .jumping {
+            animation: jumpAnimation 0.5s ease-out;
+        }
+        
+        @keyframes jumpAnimation {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-100px); }
+            100% { transform: translateY(0); }
+        }
+        
+        @media screen and (max-width: 768px) {
+            #gameContainer {
+                max-width: 100%;
+                max-height: 100%;
+                border: none;
+            }
+            
+            #controls {
+                display: none;
+            }
+            
+            #mobileControls {
+                display: block;
+            }
+            
+            #muteBtn {
+                right: 100px;
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+            
+            .title {
+                font-size: 36px;
+                margin-bottom: 20px;
+            }
+            
+            .btn {
+                padding: 12px 24px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ground"></div>
+        <div id="player"></div>
+        <div id="timeDisplay">時間: 0秒</div>
+        <div id="livesDisplay">生命: 3</div>
+        <button id="muteBtn">🔊</button>
+        <div id="controls">按空格鍵跳躍</div>
+        <div id="mobileControls">點擊屏幕跳躍</div>
+        
+        <div id="startScreen">
+            <h1 class="title">森林酷跑遊戲</h1>
+            <div id="platformHint" style="color: white; font-size: 20px; margin-bottom: 20px; text-align: center;">
+                <!-- 平台提示將由JavaScript動態添加 -->
+            </div>
+            <button id="startBtn" class="btn">遊戲開始</button>
+        </div>
+        
+        <div id="gameOverScreen">
+            <h1 class="title">遊戲結束</h1>
+            <div id="finalTime" style="color: white; font-size: 24px; margin-bottom: 20px;">存活時間: 0秒</div>
+            <button id="restartBtn" class="btn">再玩一次</button>
+        </div>
+    </div>
+
+    <!-- 音效檔案 -->
+    <audio id="bgMusic" loop>
+        <source src="Skyfire Chase.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="jumpSound">
+        <source src="sound-effect-hd.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="deathSound">
+        <source src="explosion.MP3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // 遊戲變量
+        let gameRunning = false;
+        let gameTime = 0;
+        let lives = 3;
+        let obstacles = [];
+        let isJumping = false;
+        let gameSpeed = 5;
+        let obstacleInterval = 4000;
+        let lastObstacleTime = 0;
+        let animationId;
+        let timeInterval;
+        let isMobile = false;
+        let isMuted = false;
+        
+        // DOM元素
+        const gameContainer = document.getElementById('gameContainer');
+        const player = document.getElementById('player');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const livesDisplay = document.getElementById('livesDisplay');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const finalTime = document.getElementById('finalTime');
+        const bgMusic = document.getElementById('bgMusic');
+        const jumpSound = document.getElementById('jumpSound');
+        const deathSound = document.getElementById('deathSound');
+        const platformHint = document.getElementById('platformHint');
+        const muteBtn = document.getElementById('muteBtn');
+        
+        // 靜音/取消靜音功能
+        function toggleMute() {
+            isMuted = !isMuted;
+            
+            if (isMuted) {
+                bgMusic.volume = 0;
+                jumpSound.volume = 0;
+                deathSound.volume = 0;
+                muteBtn.textContent = '🔇';
+            } else {
+                bgMusic.volume = 1;
+                jumpSound.volume = 1;
+                deathSound.volume = 1;
+                muteBtn.textContent = '🔊';
+            }
+        }
+        
+        // 檢測設備類型
+        function detectDevice() {
+            isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                platformHint.innerHTML = '點擊屏幕跳躍';
+            } else {
+                platformHint.textContent = '按空格鍵跳躍';
+            }
+        }
+        
+        // 更新時間顯示
+        function updateTime() {
+            timeDisplay.textContent = `時間: ${gameTime}秒`;
+        }
+        
+        // 開始計時
+        function startTimer() {
+            gameTime = 0;
+            updateTime();
+            timeInterval = setInterval(() => {
+                gameTime++;
+                updateTime();
+            }, 1000);
+        }
+        
+        // 停止計時
+        function stopTimer() {
+            clearInterval(timeInterval);
+        }
+        
+        // 創建背景元素
+        function createBackground() {
+            // 創建樹木
+            for (let i = 0; i < 5; i++) {
+                const tree = document.createElement('div');
+                tree.className = 'tree';
+                tree.style.left = `${Math.random() * gameContainer.offsetWidth}px`;
+                tree.style.bottom = '60px';
+                tree.style.zIndex = '1';
+                gameContainer.appendChild(tree);
+            }
+            
+            // 創建雲朵
+            for (let i = 0; i < 4; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                cloud.style.left = `${Math.random() * (gameContainer.offsetWidth - 100)}px`;
+                cloud.style.top = `${50 + Math.random() * 100}px`;
+                gameContainer.appendChild(cloud);
+            }
+        }
+        
+        // 開始遊戲
+        function startGame() {
+            gameRunning = true;
+            lives = 3;
+            obstacles = [];
+            isJumping = false;
+            gameSpeed = 5;
+            obstacleInterval = 4000;
+            
+            // 重置玩家位置和狀態
+            player.style.bottom = '60px';
+            player.classList.remove('jumping');
+            
+            // 清除所有障礙物
+            document.querySelectorAll('.obstacle').forEach(obs => obs.remove());
+            
+            // 更新顯示
+            livesDisplay.textContent = `生命: ${lives}`;
+            
+            // 隱藏開始畫面
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            
+            // 播放背景音樂
+            bgMusic.currentTime = 0;
+            if (!isMuted) {
+                bgMusic.play();
+            }
+            
+            // 開始計時
+            startTimer();
+            
+            // 開始遊戲循環
+            lastObstacleTime = performance.now();
+            gameLoop();
+        }
+        
+        // 遊戲結束
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(animationId);
+            stopTimer();
+            
+            // 顯示遊戲結束畫面
+            finalTime.textContent = `存活時間: ${gameTime}秒`;
+            gameOverScreen.style.display = 'flex';
+            
+            // 停止背景音樂
+            bgMusic.pause();
+        }
+        
+        // 跳躍功能
+        function jump() {
+            if (!isJumping && gameRunning) {
+                isJumping = true;
+                player.classList.add('jumping');
+                if (!isMuted) {
+                    jumpSound.currentTime = 0;
+                    jumpSound.play();
+                }
+                
+                setTimeout(() => {
+                    player.classList.remove('jumping');
+                    isJumping = false;
+                }, 500);
+            }
+        }
+        
+        // 創建障礙物（帶隨機高度）
+        function createObstacle() {
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            obstacle.style.left = `${gameContainer.offsetWidth}px`; // 從右側開始
+            
+            // 隨機高度（30px到80px之間）
+            const height = 30 + Math.random() * 50;
+            obstacle.style.height = `${height}px`;
+            
+            gameContainer.appendChild(obstacle);
+            obstacles.push({
+                element: obstacle
+            });
+        }
+        
+        // 檢測碰撞
+        function checkCollisions() {
+            const playerRect = player.getBoundingClientRect();
+            let hitObstacle = false;
+            
+            for (let i = 0; i < obstacles.length; i++) {
+                const obstacle = obstacles[i];
+                const obstacleRect = obstacle.element.getBoundingClientRect();
+                
+                // 碰撞檢測（只有在地面時才會碰撞）
+                if (playerRect.right > obstacleRect.left &&
+                    playerRect.left < obstacleRect.right &&
+                    !isJumping) {
+                    hitObstacle = true;
+                }
+            }
+            
+            return hitObstacle;
+        }
+        
+        // 遊戲主循環
+        function gameLoop(timestamp) {
+            if (!gameRunning) return;
+            
+            // 生成障礙物
+            if (timestamp - lastObstacleTime > obstacleInterval) {
+                createObstacle();
+                lastObstacleTime = timestamp;
+                
+                // 隨機間隔時間（3500-5000毫秒）
+                obstacleInterval = 3500 + Math.random() * 1500;
+                
+                // 隨遊戲進行稍微增加難度
+                if (gameTime > 50) obstacleInterval *= 0.98;
+                if (gameTime > 100) obstacleInterval *= 0.97;
+            }
+            
+            // 移動障礙物（從右向左移動）
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obstacle = obstacles[i];
+                const obstacleLeft = parseInt(obstacle.element.style.left) || gameContainer.offsetWidth;
+                const newLeft = obstacleLeft - gameSpeed;
+                
+                if (newLeft < -50) {
+                    // 障礙物離開屏幕
+                    obstacle.element.remove();
+                    obstacles.splice(i, 1);
+                } else {
+                    obstacle.element.style.left = `${newLeft}px`;
+                }
+            }
+            
+            // 檢測碰撞
+            if (checkCollisions()) {
+                if (!isMuted) {
+                    deathSound.currentTime = 0;
+                    deathSound.play();
+                }
+                
+                lives--;
+                livesDisplay.textContent = `生命: ${lives}`;
+                
+                // 移除碰撞的障礙物
+                if (obstacles.length > 0) {
+                    obstacles[0].element.remove();
+                    obstacles.shift();
+                }
+                
+                if (lives <= 0) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        // 事件監聽
+        startBtn.addEventListener('click', function() {
+            startGame();
+        });
+        
+        restartBtn.addEventListener('click', function() {
+            startGame();
+        });
+        
+        muteBtn.addEventListener('click', toggleMute);
+        
+        // 根據設備類型添加控制方式
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                jump();
+            }
+        });
+        
+        // 手機觸控控制
+        gameContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            jump();
+        });
+        
+        // 防止手機上的滾動行為
+        document.addEventListener('touchmove', (e) => {
+            if (gameRunning) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // 初始化遊戲
+        detectDevice();
+        createBackground();
+    </script>
+</body>
+</html>
