@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>避障礙物遊戲</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+            background-color: #4CAF50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 90vw;
+            max-width: 450px;
+            height: calc(90vw * 16 / 9);
+            max-height: 800px;
+            background-color: #8BC34A;
+            overflow: hidden;
+            border: 4px solid #388E3C;
+            border-radius: 10px;
+        }
+        
+        #start-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        #game-title {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px #000;
+            text-align: center;
+        }
+        
+        #controls-instruction {
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            text-align: center;
+            text-shadow: 1px 1px 2px #000;
+        }
+        
+        #mobile-instruction {
+            display: none;
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            text-align: center;
+            text-shadow: 1px 1px 2px #000;
+        }
+        
+        #start-button {
+            padding: 15px 30px;
+            font-size: 1.5rem;
+            background-color: #FF5722;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+        
+        #start-button:active {
+            transform: scale(0.95);
+        }
+        
+        #game-over-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        #game-over-text {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px #000;
+        }
+        
+        #final-time {
+            color: #FFC107;
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+        }
+        
+        #restart-button {
+            padding: 15px 30px;
+            font-size: 1.5rem;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        #player {
+            position: absolute;
+            width: 15%;
+            height: 10%;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-image: url('trolly.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 10;
+        }
+        
+        .obstacle {
+            position: absolute;
+            width: 15%;
+            height: 10%;
+            background-color: #795548;
+            border: 2px solid #5D4037;
+            border-radius: 3px;
+            z-index: 5;
+        }
+        
+        .tree {
+            position: absolute;
+            width: 10%;
+            height: 15%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150"><path d="M50 0 L60 40 L90 40 L65 60 L75 100 L50 80 L25 100 L35 60 L10 40 L40 40 Z" fill="%23388E3C"/><rect x="45" y="100" width="10" height="50" fill="%235D4037"/></svg>');
+            background-size: contain;
+            background-repeat: no-repeat;
+            z-index: 2;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            display: none;
+            justify-content: space-around;
+            padding: 0 20%;
+            z-index: 20;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        
+        #timer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 1.5rem;
+            color: white;
+            text-shadow: 1px 1px 2px #000;
+            z-index: 10;
+        }
+        
+        #lives {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 10;
+        }
+        
+        .life {
+            width: 20px;
+            height: 20px;
+            background-color: #F44336;
+            border-radius: 50%;
+            box-shadow: 1px 1px 2px #000;
+        }
+        
+        @media (min-width: 768px) {
+            #controls {
+                display: none !important;
+            }
+            #controls-instruction {
+                display: block;
+            }
+            #mobile-instruction {
+                display: none !important;
+            }
+        }
+        
+        @media (max-width: 767px) {
+            #controls-instruction {
+                display: none;
+            }
+            #mobile-instruction {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="start-screen">
+            <h1 id="game-title">避障礙物遊戲</h1>
+            <div id="controls-instruction">使用鍵盤 ← → 方向鍵控制車輛避開障礙物</div>
+            <div id="mobile-instruction">點擊下方按鈕控制車輛避開障礙物</div>
+            <button id="start-button">遊戲開始</button>
+        </div>
+        
+        <div id="game-over-screen">
+            <h1 id="game-over-text">遊戲結束</h1>
+            <div id="final-time">時間: 0秒</div>
+            <button id="restart-button">再玩一次</button>
+        </div>
+        
+        <div id="timer">0秒</div>
+        <div id="lives">
+            <div class="life"></div>
+            <div class="life"></div>
+            <div class="life"></div>
+        </div>
+        
+        <div id="player"></div>
+        
+        <div id="controls">
+            <div class="control-btn" id="left-btn">←</div>
+            <div class="control-btn" id="right-btn">→</div>
+        </div>
+    </div>
+
+    <audio id="bg-music" loop>
+        <source src="Skyfire Chase.mp3" type="audio/mpeg">
+    </audio>
+    
+    <audio id="crash-sound">
+        <source src="explosion.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // 遊戲變數
+        const gameContainer = document.getElementById('game-container');
+        const player = document.getElementById('player');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const timerDisplay = document.getElementById('timer');
+        const livesDisplay = document.getElementById('lives');
+        const finalTimeDisplay = document.getElementById('final-time');
+        const bgMusic = document.getElementById('bg-music');
+        const crashSound = document.getElementById('crash-sound');
+        const leftBtn = document.getElementById('left-btn');
+        const rightBtn = document.getElementById('right-btn');
+        const controls = document.getElementById('controls');
+        
+        let gameWidth = gameContainer.offsetWidth;
+        let gameHeight = gameContainer.offsetHeight;
+        let playerWidth = player.offsetWidth;
+        let playerHeight = player.offsetHeight;
+        let playerX = (gameWidth - playerWidth) / 2;
+        let playerSpeed = 10;
+        let obstacles = [];
+        let trees = [];
+        let gameRunning = false;
+        let gameTime = 0;
+        let timerInterval;
+        let lives = 3;
+        let obstacleSpeed = 5;
+        let obstacleInterval = 800;
+        let obstacleTimer;
+        let treeTimer;
+        let lastTime = 0;
+        let animationId;
+        
+        // 檢測是否為移動設備
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            controls.style.display = 'flex';
+        }
+        
+        // 調整遊戲尺寸
+        function resizeGame() {
+            gameWidth = gameContainer.offsetWidth;
+            gameHeight = gameContainer.offsetHeight;
+            playerWidth = player.offsetWidth;
+            playerHeight = player.offsetHeight;
+            playerX = (gameWidth - playerWidth) / 2;
+            player.style.left = playerX + 'px';
+        }
+        
+        window.addEventListener('resize', resizeGame);
+        
+        // 移動玩家 - 直接更新位置，不使用動畫幀
+        function movePlayer(direction) {
+            if (!gameRunning) return;
+            
+            if (direction === 'left' && playerX > 0) {
+                playerX -= playerSpeed;
+            } else if (direction === 'right' && playerX < gameWidth - playerWidth) {
+                playerX += playerSpeed;
+            }
+            
+            player.style.left = playerX + 'px';
+        }
+        
+        // 鍵盤控制 - 使用keydown事件立即響應
+        let leftPressed = false;
+        let rightPressed = false;
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                leftPressed = true;
+                movePlayer('left');
+            } else if (e.key === 'ArrowRight') {
+                rightPressed = true;
+                movePlayer('right');
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') {
+                leftPressed = false;
+            } else if (e.key === 'ArrowRight') {
+                rightPressed = false;
+            }
+        });
+        
+        // 觸摸控制 - 立即響應
+        leftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            movePlayer('left');
+        }, {passive: false});
+        
+        rightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            movePlayer('right');
+        }, {passive: false});
+        
+        // 持續移動處理
+        function handleContinuousMovement() {
+            if (leftPressed) movePlayer('left');
+            if (rightPressed) movePlayer('right');
+            animationId = requestAnimationFrame(handleContinuousMovement);
+        }
+        
+        // 創建障礙物
+        function createObstacle() {
+            if (!gameRunning) return;
+            
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            
+            const obstacleWidth = gameWidth * 0.15;
+            const obstacleHeight = gameHeight * 0.1;
+            const obstacleX = Math.random() * (gameWidth - obstacleWidth);
+            
+            obstacle.style.width = obstacleWidth + 'px';
+            obstacle.style.height = obstacleHeight + 'px';
+            obstacle.style.left = obstacleX + 'px';
+            obstacle.style.top = -obstacleHeight + 'px';
+            
+            gameContainer.appendChild(obstacle);
+            obstacles.push({
+                element: obstacle,
+                x: obstacleX,
+                y: -obstacleHeight,
+                width: obstacleWidth,
+                height: obstacleHeight
+            });
+        }
+        
+        // 創建樹木
+        function createTree() {
+            if (!gameRunning) return;
+            
+            const tree = document.createElement('div');
+            tree.className = 'tree';
+            
+            const treeWidth = gameWidth * 0.1;
+            const treeHeight = gameHeight * 0.15;
+            const treeX = Math.random() * (gameWidth - treeWidth);
+            
+            tree.style.width = treeWidth + 'px';
+            tree.style.height = treeHeight + 'px';
+            tree.style.left = treeX + 'px';
+            tree.style.top = -treeHeight + 'px';
+            
+            gameContainer.appendChild(tree);
+            trees.push({
+                element: tree,
+                x: treeX,
+                y: -treeHeight,
+                width: treeWidth,
+                height: treeHeight,
+                speed: 3 + Math.random() * 3
+            });
+        }
+        
+        // 更新障礙物位置
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obstacle = obstacles[i];
+                obstacle.y += obstacleSpeed;
+                obstacle.element.style.top = obstacle.y + 'px';
+                
+                // 檢查碰撞
+                if (checkCollision(playerX, gameHeight * 0.95 - playerHeight, playerWidth, playerHeight, 
+                                  obstacle.x, obstacle.y, obstacle.width, obstacle.height)) {
+                    crashSound.currentTime = 0;
+                    crashSound.play();
+                    removeObstacle(i);
+                    loseLife();
+                    return;
+                }
+                
+                // 移除超出屏幕的障礙物
+                if (obstacle.y > gameHeight) {
+                    removeObstacle(i);
+                }
+            }
+        }
+        
+        // 更新樹木位置
+        function updateTrees() {
+            for (let i = trees.length - 1; i >= 0; i--) {
+                const tree = trees[i];
+                tree.y += tree.speed;
+                tree.element.style.top = tree.y + 'px';
+                
+                // 移除超出屏幕的樹木
+                if (tree.y > gameHeight) {
+                    removeTree(i);
+                }
+            }
+        }
+        
+        // 移除障礙物
+        function removeObstacle(index) {
+            gameContainer.removeChild(obstacles[index].element);
+            obstacles.splice(index, 1);
+        }
+        
+        // 移除樹木
+        function removeTree(index) {
+            gameContainer.removeChild(trees[index].element);
+            trees.splice(index, 1);
+        }
+        
+        // 碰撞檢測
+        function checkCollision(x1, y1, w1, h1, x2, y2, w2, h2) {
+            return x1 < x2 + w2 &&
+                   x1 + w1 > x2 &&
+                   y1 < y2 + h2 &&
+                   y1 + h1 > y2;
+        }
+        
+        // 失去生命
+        function loseLife() {
+            lives--;
+            updateLivesDisplay();
+            
+            if (lives <= 0) {
+                gameOver();
+            }
+        }
+        
+        // 更新生命顯示
+        function updateLivesDisplay() {
+            const lifeElements = livesDisplay.querySelectorAll('.life');
+            lifeElements.forEach((life, index) => {
+                life.style.backgroundColor = index < lives ? '#F44336' : '#888';
+            });
+        }
+        
+        // 更新計時器
+        function updateTimer() {
+            gameTime++;
+            const minutes = Math.floor(gameTime / 60);
+            const seconds = gameTime % 60;
+            timerDisplay.textContent = `${minutes > 0 ? minutes + '分' : ''}${seconds}秒`;
+            
+            // 隨時間增加難度
+            if (gameTime > 20 && obstacleSpeed < 8) {
+                obstacleSpeed = 5 + Math.floor(gameTime / 20);
+            }
+            
+            if (gameTime > 20 && obstacleInterval > 500) {
+                obstacleInterval = 800 - Math.floor(gameTime / 10) * 30;
+                if (obstacleInterval < 500) obstacleInterval = 500;
+                
+                clearInterval(obstacleTimer);
+                obstacleTimer = setInterval(createObstacle, obstacleInterval);
+            }
+        }
+        
+        // 遊戲結束
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(timerInterval);
+            clearInterval(obstacleTimer);
+            clearInterval(treeTimer);
+            cancelAnimationFrame(animationId);
+            
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
+            
+            finalTimeDisplay.textContent = `時間: ${timerDisplay.textContent}`;
+            gameOverScreen.style.display = 'flex';
+        }
+        
+        // 重置遊戲
+        function resetGame() {
+            // 清除所有障礙物和樹木
+            obstacles.forEach(obstacle => gameContainer.removeChild(obstacle.element));
+            trees.forEach(tree => gameContainer.removeChild(tree.element));
+            obstacles = [];
+            trees = [];
+            
+            // 重置玩家位置
+            userX = (gameWidth - playerWidth) / 2;
+            player.style.left = playerX + 'px';
+            
+            // 重置遊戲狀態
+            gameTime = 0;
+            timerDisplay.textContent = '0秒';
+            lives = 3;
+            updateLivesDisplay();
+            obstacleSpeed = 5;
+            obstacleInterval = 800;
+        }
+        
+        // 遊戲主循環
+        function gameLoop(timestamp) {
+            if (!gameRunning) return;
+            
+            updateObstacles();
+            updateTrees();
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        // 開始遊戲
+        function startGame() {
+            resetGame();
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            gameRunning = true;
+            
+            // 開始計時
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            // 開始生成障礙物和樹木
+            obstacleTimer = setInterval(createObstacle, obstacleInterval);
+            treeTimer = setInterval(createTree, 800);
+            
+            // 播放背景音樂
+            bgMusic.play().catch(e => console.log('自動播放被阻止:', e));
+            
+            // 開始遊戲循環
+            animationId = requestAnimationFrame(gameLoop);
+            // 開始持續移動檢測
+            handleContinuousMovement();
+        }
+        
+        // 事件監聽
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+        
+        // 初始調整尺寸
+        resizeGame();
+    </script>
+</body>
+</html>
