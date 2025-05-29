@@ -1,0 +1,2417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Maze Shooter - Multi-Platform</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .game-container {
+            text-align: center;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 450px;
+            max-height: 800px;
+        }
+
+        /* Desktop Styles */
+        .desktop .game-container {
+            width: 450px;
+            height: 800px;
+        }
+
+        /* Mobile Styles */
+        .mobile .game-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            border: 3px solid #ff6b6b;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+            background: #000;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 14px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+            line-height: 1.3;
+        }
+
+        .mobile .ui {
+            font-size: 12px;
+            top: 5px;
+            left: 5px;
+        }
+
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: #ff6b6b;
+            box-shadow: 0 0 5px rgba(255, 107, 107, 0.8);
+        }
+
+        .crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+        }
+
+        .crosshair::after {
+            height: 2px;
+            width: 20px;
+            top: 9px;
+        }
+
+        .menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #ff6b6b;
+            z-index: 20;
+            max-width: 90%;
+            text-align: center;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .mobile .menu {
+            padding: 15px;
+            font-size: 14px;
+        }
+
+        .menu h1 {
+            font-size: 22px;
+            margin: 10px 0;
+        }
+
+        .mobile .menu h1 {
+            font-size: 18px;
+        }
+
+        .menu p {
+            font-size: 12px;
+            margin: 6px 0;
+        }
+
+        .mobile .menu p {
+            font-size: 11px;
+        }
+
+        .audio-controls {
+            margin: 12px 0;
+            font-size: 11px;
+        }
+
+        .mobile .audio-controls {
+            font-size: 10px;
+        }
+
+        .volume-control {
+            margin: 4px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .volume-control input {
+            width: 80px;
+        }
+
+        .mobile .volume-control input {
+            width: 60px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            touch-action: manipulation;
+        }
+
+        .mobile button {
+            padding: 12px 24px;
+            font-size: 16px;
+        }
+
+        button:hover, button:active {
+            background: linear-gradient(45deg, #ee5a52, #ff6b6b);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.5);
+        }
+
+        .gun-container {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 280px;
+            height: 180px;
+            z-index: 5;
+            transition: all 0.1s ease-out;
+        }
+
+        .mobile .gun-container {
+            width: 35%;
+            height: 22%;
+            bottom: 15%;
+        }
+
+        .gun-container.shooting {
+            transform: translateX(-50%) translateY(-12px);
+        }
+
+        .screen-shake {
+            animation: screenShake 0.2s;
+        }
+
+        @keyframes screenShake {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-2px, 2px); }
+            50% { transform: translate(2px, -2px); }
+            75% { transform: translate(-2px, -2px); }
+        }
+
+        .audio-status {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 10px;
+            color: #ccc;
+            z-index: 10;
+        }
+
+        .mobile .audio-status {
+            font-size: 8px;
+            bottom: 5px;
+            right: 5px;
+        }
+
+        .test-audio-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            margin: 3px;
+            padding: 6px 12px;
+            font-size: 10px;
+        }
+
+        .mobile .test-audio-btn {
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .test-audio-btn:hover {
+            background: linear-gradient(45deg, #45a049, #4CAF50);
+        }
+
+        .audio-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 9px;
+            color: #aaa;
+            z-index: 10;
+            text-align: right;
+            line-height: 1.2;
+        }
+
+        .mobile .audio-info {
+            font-size: 8px;
+            top: 5px;
+            right: 5px;
+        }
+
+        /* Virtual Controls for Mobile */
+        .virtual-controls {
+            display: none;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        .mobile .virtual-controls {
+            display: block;
+        }
+
+        .dpad {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
+            pointer-events: auto;
+        }
+
+        .dpad-button {
+            position: absolute;
+            background: rgba(255, 107, 107, 0.3);
+            border: 2px solid rgba(255, 107, 107, 0.6);
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dpad-button:active {
+            background: rgba(255, 107, 107, 0.7);
+            border-color: rgba(255, 107, 107, 0.9);
+            transform: scale(0.95);
+        }
+
+        .dpad-up {
+            top: 0;
+            left: 40px;
+            width: 40px;
+            height: 40px;
+        }
+
+        .dpad-down {
+            bottom: 0;
+            left: 40px;
+            width: 40px;
+            height: 40px;
+        }
+
+        .dpad-left {
+            left: 0;
+            top: 40px;
+            width: 40px;
+            height: 40px;
+        }
+
+        .dpad-right {
+            right: 0;
+            top: 40px;
+            width: 40px;
+            height: 40px;
+        }
+
+        .action-buttons {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            pointer-events: auto;
+        }
+
+        .shoot-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 107, 107, 0.3);
+            border: 3px solid rgba(255, 107, 107, 0.6);
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .shoot-button:active {
+            background: rgba(255, 107, 107, 0.7);
+            border-color: rgba(255, 107, 107, 0.9);
+            transform: scale(0.9);
+        }
+
+        .device-info {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            font-size: 8px;
+            color: #666;
+            z-index: 10;
+        }
+
+        .mobile .device-info {
+            top: 30px;
+            right: 5px;
+        }
+
+        /* Orientation lock message */
+        .orientation-message {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            color: #fff;
+            font-size: 18px;
+            text-align: center;
+            padding: 20px;
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @media screen and (orientation: landscape) and (max-height: 500px) {
+            .mobile .orientation-message {
+                display: flex;
+            }
+        }
+
+        /* Performance optimizations for mobile */
+        .mobile canvas {
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        /* Touch feedback */
+        .dpad-button.touching,
+        .shoot-button.touching {
+            background: rgba(255, 107, 107, 0.8) !important;
+            border-color: rgba(255, 107, 107, 1) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="orientation-message">
+        <div>📱</div>
+        <div>Please rotate your device to portrait mode for better gameplay experience</div>
+    </div>
+
+    <div class="game-container" id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="ui">
+            <div>Score: <span id="score">0</span></div>
+            <div>Lives: <span id="lives">3</span></div>
+            <div>Enemies: <span id="enemies">0</span></div>
+            <div>Wave: <span id="wave">1</span></div>
+        </div>
+        
+        <div class="audio-info" id="audioInfo">
+            🎵 BGM: <span id="bgmStatus">Loading...</span><br>
+            🔊 SFX: <span id="sfxStatus">Loading...</span>
+        </div>
+        
+        <div class="device-info" id="deviceInfo">
+            📱 Device: <span id="deviceType">Detecting...</span>
+        </div>
+        
+        <div class="crosshair"></div>
+        
+        <div class="gun-container" id="gunContainer">
+            <canvas id="gunCanvas"></canvas>
+        </div>
+        
+        <div class="audio-status" id="audioStatus">🔊 Audio Loading...</div>
+        
+        <!-- Virtual Controls for Mobile -->
+        <div class="virtual-controls" id="virtualControls">
+            <div class="dpad">
+                <div class="dpad-button dpad-up" data-key="ArrowUp">↑</div>
+                <div class="dpad-button dpad-down" data-key="ArrowDown">↓</div>
+                <div class="dpad-button dpad-left" data-key="ArrowLeft">←</div>
+                <div class="dpad-button dpad-right" data-key="ArrowRight">→</div>
+            </div>
+            <div class="action-buttons">
+                <div class="shoot-button" data-key="Space">🔥</div>
+            </div>
+        </div>
+        
+        <div class="menu" id="menu">
+            <h1>3D MAZE SHOOTER</h1>
+            <p id="controlInstructions">Detecting device...</p>
+            <p>Enemies spawn continuously</p>
+            <p>Survive as long as you can!</p>
+            <div class="audio-controls">
+                <div class="volume-control">
+                    <label>Music: </label>
+                    <input type="range" id="musicVolume" min="0" max="100" value="85">
+                    <span id="musicVolumeValue">85%</span>
+                </div>
+                <div class="volume-control">
+                    <label>SFX: </label>
+                    <input type="range" id="sfxVolume" min="0" max="100" value="75">
+                    <span id="sfxVolumeValue">75%</span>
+                </div>
+                <div>
+                    <button class="test-audio-btn" id="testMusicBtn">Test Music</button>
+                    <button class="test-audio-btn" id="testSfxBtn">Test SFX</button>
+                </div>
+            </div>
+            <button id="startButton">START GAME</button>
+        </div>
+        
+        <div class="menu" id="gameOverMenu" style="display: none;">
+            <h1>GAME OVER</h1>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <p>Wave Reached: <span id="finalWave">1</span></p>
+            <div class="audio-controls">
+                <div class="volume-control">
+                    <label>Music: </label>
+                    <input type="range" id="musicVolume2" min="0" max="100" value="85">
+                    <span id="musicVolumeValue2">85%</span>
+                </div>
+                <div class="volume-control">
+                    <label>SFX: </label>
+                    <input type="range" id="sfxVolume2" min="0" max="100" value="75">
+                    <span id="sfxVolumeValue2">75%</span>
+                </div>
+                <div>
+                    <button class="test-audio-btn" id="testMusicBtn2">Test Music</button>
+                    <button class="test-audio-btn" id="testSfxBtn2">Test SFX</button>
+                </div>
+            </div>
+            <button id="restartButton">RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        // Device Detection and Platform Setup
+        class DeviceManager {
+            constructor() {
+                this.isMobile = this.detectMobile();
+                this.setupDevice();
+                this.setupCanvasSize();
+                this.logDeviceInfo();
+            }
+            
+            detectMobile() {
+                const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+                const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+                const touchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                const smallScreen = window.innerWidth <= 768 || window.innerHeight <= 768;
+                
+                return mobileRegex.test(userAgent) || (touchSupport && smallScreen);
+            }
+            
+            setupDevice() {
+                const body = document.body;
+                if (this.isMobile) {
+                    body.classList.add('mobile');
+                    this.setupMobileFeatures();
+                    document.getElementById('deviceType').textContent = 'Mobile';
+                    document.getElementById('controlInstructions').textContent = 'Use on-screen controls to move and shoot';
+                } else {
+                    body.classList.add('desktop');
+                    document.getElementById('deviceType').textContent = 'Desktop';
+                    document.getElementById('controlInstructions').textContent = 'Use arrow keys to move, SPACE to shoot';
+                }
+                
+                console.log(`📱 Device detected: ${this.isMobile ? 'Mobile' : 'Desktop'}`);
+            }
+            
+            setupMobileFeatures() {
+                // Prevent zoom and scroll
+                document.addEventListener('touchmove', (e) => {
+                    if (e.scale !== 1) e.preventDefault();
+                }, { passive: false });
+                
+                // Prevent context menu
+                document.addEventListener('contextmenu', (e) => e.preventDefault());
+                
+                // Lock orientation to portrait on mobile
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('portrait').catch(() => {
+                        console.log('📱 Cannot lock orientation, but will show message');
+                    });
+                }
+                
+                // Add mobile-specific meta tags
+                this.addMobileMetaTags();
+            }
+            
+            addMobileMetaTags() {
+                // PWA capabilities
+                const metaTags = [
+                    { name: 'apple-mobile-web-app-capable', content: 'yes' },
+                    { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+                    { name: 'mobile-web-app-capable', content: 'yes' },
+                    { name: 'theme-color', content: '#1a1a2e' }
+                ];
+                
+                metaTags.forEach(tag => {
+                    const meta = document.createElement('meta');
+                    meta.name = tag.name;
+                    meta.content = tag.content;
+                    document.head.appendChild(meta);
+                });
+            }
+            
+            setupCanvasSize() {
+                const gameCanvas = document.getElementById('gameCanvas');
+                const gunCanvas = document.getElementById('gunCanvas');
+                
+                if (this.isMobile) {
+                    // Mobile responsive canvas
+                    const updateCanvasSize = () => {
+                        const container = document.getElementById('gameContainer');
+                        const rect = container.getBoundingClientRect();
+                        
+                        // Main game canvas
+                        gameCanvas.width = Math.min(360, rect.width * 0.9);
+                        gameCanvas.height = Math.min(640, rect.height * 0.9);
+                        
+                        // Gun canvas proportional to main canvas
+                        gunCanvas.width = gameCanvas.width * 0.7;
+                        gunCanvas.height = gameCanvas.height * 0.25;
+                        
+                        console.log(`📱 Mobile canvas size: ${gameCanvas.width}x${gameCanvas.height}`);
+                    };
+                    
+                    updateCanvasSize();
+                    window.addEventListener('resize', updateCanvasSize);
+                    window.addEventListener('orientationchange', () => {
+                        setTimeout(updateCanvasSize, 100);
+                    });
+                } else {
+                    // Desktop fixed canvas
+                    gameCanvas.width = 450;
+                    gameCanvas.height = 800;
+                    gunCanvas.width = 280;
+                    gunCanvas.height = 180;
+                    console.log(`🖥️ Desktop canvas size: ${gameCanvas.width}x${gameCanvas.height}`);
+                }
+            }
+            
+            logDeviceInfo() {
+                console.log('📱 Device Information:');
+                console.log(`   - User Agent: ${navigator.userAgent}`);
+                console.log(`   - Screen Size: ${window.innerWidth}x${window.innerHeight}`);
+                console.log(`   - Touch Support: ${('ontouchstart' in window)}`);
+                console.log(`   - Platform: ${this.isMobile ? 'Mobile' : 'Desktop'}`);
+                console.log(`   - Pixel Ratio: ${window.devicePixelRatio}`);
+                console.log(`   - Orientation: ${screen.orientation ? screen.orientation.type : 'Unknown'}`);
+            }
+        }
+
+        // Virtual Controls for Mobile
+        class VirtualControls {
+            constructor(game) {
+                this.game = game;
+                this.touchedButtons = new Set();
+                this.activeTouch = null;
+                this.setupVirtualControls();
+            }
+            
+            setupVirtualControls() {
+                console.log('📱 Setting up virtual controls...');
+                
+                // D-pad buttons
+                const dpadButtons = document.querySelectorAll('.dpad-button');
+                dpadButtons.forEach(button => {
+                    this.setupButton(button);
+                });
+                
+                // Shoot button
+                const shootButton = document.querySelector('.shoot-button');
+                this.setupButton(shootButton);
+                
+                console.log('📱 Virtual controls ready');
+            }
+            
+            setupButton(button) {
+                const key = button.dataset.key;
+                
+                // Touch events
+                button.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.handleButtonPress(key, button, true);
+                }, { passive: false });
+                
+                button.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.handleButtonPress(key, button, false);
+                }, { passive: false });
+                
+                button.addEventListener('touchcancel', (e) => {
+                    e.preventDefault();
+                    this.handleButtonPress(key, button, false);
+                }, { passive: false });
+                
+                // Mouse events for testing on desktop
+                button.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    this.handleButtonPress(key, button, true);
+                });
+                
+                button.addEventListener('mouseup', (e) => {
+                    e.preventDefault();
+                    this.handleButtonPress(key, button, false);
+                });
+                
+                button.addEventListener('mouseleave', (e) => {
+                    this.handleButtonPress(key, button, false);
+                });
+            }
+            
+            handleButtonPress(key, button, isPressed) {
+                if (isPressed) {
+                    this.touchedButtons.add(key);
+                    button.classList.add('touching');
+                    this.game.keys[key] = true;
+                    
+                    // Special handling for shoot button
+                    if (key === 'Space') {
+                        this.game.shoot();
+                    }
+                    
+                    console.log(`📱 Virtual button pressed: ${key}`);
+                } else {
+                    this.touchedButtons.delete(key);
+                    button.classList.remove('touching');
+                    this.game.keys[key] = false;
+                    
+                    console.log(`📱 Virtual button released: ${key}`);
+                }
+            }
+            
+            // Continuous fire for shoot button
+            startContinuousFire() {
+                if (this.touchedButtons.has('Space')) {
+                    this.game.shoot();
+                    setTimeout(() => this.startContinuousFire(), 200);
+                }
+            }
+        }
+
+        // Enhanced Audio Manager with Mobile Support
+        class AudioManager {
+            constructor() {
+                this.bgm = null;
+                this.lazerSounds = [];
+                this.explosionSounds = [];
+                this.warningSounds = [];
+                this.musicVolume = 0.85;
+                this.sfxVolume = 0.75;
+                this.audioContext = null;
+                this.audioEnabled = false;
+                this.musicLoaded = false;
+                this.sfxLoaded = false;
+                this.bgmPlaying = false;
+                
+                this.initAudio();
+                this.setupVolumeControls();
+                this.setupTestButtons();
+                this.startStatusUpdater();
+            }
+            
+            initAudio() {
+                try {
+                    console.log('🎵 Initializing cross-platform audio system...');
+                    
+                    this.initBackgroundMusic();
+                    this.initSoundEffects();
+                    
+                    // Enhanced mobile audio support
+                    const enableAudioEvents = ['click', 'touchstart', 'keydown'];
+                    enableAudioEvents.forEach(event => {
+                        document.addEventListener(event, this.enableAudio.bind(this), { once: true });
+                    });
+                    
+                    console.log('🎵 Audio system initialized for', deviceManager.isMobile ? 'mobile' : 'desktop');
+                    this.updateAudioStatus();
+                } catch (error) {
+                    console.error('❌ Audio initialization failed:', error);
+                    this.updateAudioStatus('🔇 Audio System Failed');
+                }
+            }
+            
+            initBackgroundMusic() {
+                this.bgm = new Audio('bgm.mp3');
+                this.bgm.loop = true;
+                this.bgm.volume = this.musicVolume;
+                this.bgm.preload = 'auto';
+                
+                // Mobile-specific audio settings
+                if (deviceManager.isMobile) {
+                    this.bgm.muted = false;
+                    this.bgm.autoplay = false;
+                }
+                
+                this.bgm.addEventListener('canplaythrough', () => {
+                    console.log('🎵 Background music loaded');
+                    this.musicLoaded = true;
+                    this.updateAudioStatus();
+                    this.updateBGMStatus('Ready');
+                });
+                
+                this.bgm.addEventListener('play', () => {
+                    console.log('🎵 Background music playing');
+                    this.bgmPlaying = true;
+                    this.updateBGMStatus('Playing');
+                });
+                
+                this.bgm.addEventListener('pause', () => {
+                    console.log('🎵 Background music paused');
+                    this.bgmPlaying = false;
+                    this.updateBGMStatus('Paused');
+                });
+                
+                this.bgm.addEventListener('error', (e) => {
+                    console.error('❌ BGM load failed:', e);
+                    this.updateAudioStatus('🔇 BGM Error - Check bgm.mp3');
+                    this.updateBGMStatus('Error');
+                });
+            }
+            
+            initSoundEffects() {
+                const sfxCount = deviceManager.isMobile ? 3 : 5; // Fewer instances on mobile for performance
+                
+                // Laser sounds
+                for (let i = 0; i < sfxCount; i++) {
+                    const lazer = new Audio('lazer.MP3');
+                    lazer.volume = this.sfxVolume;
+                    lazer.preload = 'auto';
+                    if (deviceManager.isMobile) lazer.muted = false;
+                    
+                    lazer.addEventListener('canplaythrough', () => {
+                        if (i === 0) {
+                            console.log('🔫 Laser sound loaded');
+                            this.updateSFXStatus('Laser Ready');
+                        }
+                    });
+                    
+                    this.lazerSounds.push(lazer);
+                }
+                
+                // Explosion sounds
+                for (let i = 0; i < sfxCount; i++) {
+                    const explosion = new Audio('explosion.MP3');
+                    explosion.volume = this.sfxVolume;
+                    explosion.preload = 'auto';
+                    if (deviceManager.isMobile) explosion.muted = false;
+                    
+                    explosion.addEventListener('canplaythrough', () => {
+                        if (i === 0) {
+                            console.log('💥 Explosion sound loaded');
+                            this.updateSFXStatus('Explosion Ready');
+                        }
+                    });
+                    
+                    this.explosionSounds.push(explosion);
+                }
+                
+                // Warning sounds
+                for (let i = 0; i < sfxCount; i++) {
+                    const warning = new Audio('Warning.MP3');
+                    warning.volume = this.sfxVolume;
+                    warning.preload = 'auto';
+                    if (deviceManager.isMobile) warning.muted = false;
+                    
+                    warning.addEventListener('canplaythrough', () => {
+                        if (i === 0) {
+                            console.log('⚠️ Warning sound loaded');
+                            this.updateSFXStatus('Warning Ready');
+                            this.sfxLoaded = true;
+                            this.updateAudioStatus();
+                        }
+                    });
+                    
+                    this.warningSounds.push(warning);
+                }
+            }
+            
+            enableAudio() {
+                if (!this.audioEnabled) {
+                    this.audioEnabled = true;
+                    console.log('🔊 Audio enabled by user interaction');
+                    
+                    // Mobile-specific audio unlocking
+                    if (deviceManager.isMobile) {
+                        this.unlockMobileAudio();
+                    }
+                    
+                    this.updateAudioStatus();
+                }
+            }
+            
+            unlockMobileAudio() {
+                console.log('📱 Unlocking mobile audio...');
+                
+                // Play and immediately pause all audio to unlock them
+                const unlockAudio = (audio) => {
+                    if (audio && audio.paused) {
+                        const playPromise = audio.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                audio.pause();
+                                audio.currentTime = 0;
+                            }).catch(() => {
+                                console.log('📱 Audio unlock failed for one sound');
+                            });
+                        }
+                    }
+                };
+                
+                unlockAudio(this.bgm);
+                this.lazerSounds.forEach(unlockAudio);
+                this.explosionSounds.forEach(unlockAudio);
+                this.warningSounds.forEach(unlockAudio);
+                
+                console.log('📱 Mobile audio unlocked');
+            }
+            
+            updateAudioStatus() {
+                let message = deviceManager.isMobile ? '📱 ' : '🖥️ ';
+                if (this.musicLoaded && this.sfxLoaded) {
+                    message += 'All Audio Ready';
+                } else if (this.musicLoaded) {
+                    message += 'Music Ready, SFX Loading...';
+                } else if (this.sfxLoaded) {
+                    message += 'SFX Ready, Music Loading...';
+                } else {
+                    message += 'Audio Loading...';
+                }
+                
+                if (!this.audioEnabled) {
+                    message += ' (Tap to enable)';
+                }
+                
+                const statusElement = document.getElementById('audioStatus');
+                if (statusElement) {
+                    statusElement.textContent = message;
+                }
+            }
+            
+            updateBGMStatus(status) {
+                const bgmStatusElement = document.getElementById('bgmStatus');
+                if (bgmStatusElement) {
+                    bgmStatusElement.textContent = status;
+                }
+            }
+            
+            updateSFXStatus(status) {
+                const sfxStatusElement = document.getElementById('sfxStatus');
+                if (sfxStatusElement) {
+                    sfxStatusElement.textContent = status;
+                }
+            }
+            
+            startStatusUpdater() {
+                setInterval(() => {
+                    if (this.bgm) {
+                        if (this.bgmPlaying && !this.bgm.paused) {
+                            this.updateBGMStatus(`Playing ${Math.floor(this.bgm.currentTime)}s`);
+                        } else if (this.bgm.paused) {
+                            this.updateBGMStatus('Paused');
+                        }
+                    }
+                }, 1000);
+            }
+            
+            setupVolumeControls() {
+                const musicVolume = document.getElementById('musicVolume');
+                const sfxVolume = document.getElementById('sfxVolume');
+                const musicVolumeValue = document.getElementById('musicVolumeValue');
+                const sfxVolumeValue = document.getElementById('sfxVolumeValue');
+                
+                const musicVolume2 = document.getElementById('musicVolume2');
+                const sfxVolume2 = document.getElementById('sfxVolume2');
+                const musicVolumeValue2 = document.getElementById('musicVolumeValue2');
+                const sfxVolumeValue2 = document.getElementById('sfxVolumeValue2');
+                
+                const handleMusicVolume = (value) => {
+                    this.musicVolume = value / 100;
+                    if (this.bgm) {
+                        this.bgm.volume = this.musicVolume;
+                    }
+                    musicVolumeValue.textContent = value + '%';
+                    musicVolumeValue2.textContent = value + '%';
+                    musicVolume.value = value;
+                    musicVolume2.value = value;
+                };
+                
+                const handleSfxVolume = (value) => {
+                    this.sfxVolume = value / 100;
+                    this.lazerSounds.forEach(sound => sound.volume = this.sfxVolume);
+                    this.explosionSounds.forEach(sound => sound.volume = this.sfxVolume);
+                    this.warningSounds.forEach(sound => sound.volume = this.sfxVolume);
+                    
+                    sfxVolumeValue.textContent = value + '%';
+                    sfxVolumeValue2.textContent = value + '%';
+                    sfxVolume.value = value;
+                    sfxVolume2.value = value;
+                };
+                
+                musicVolume.addEventListener('input', (e) => handleMusicVolume(e.target.value));
+                musicVolume2.addEventListener('input', (e) => handleMusicVolume(e.target.value));
+                sfxVolume.addEventListener('input', (e) => handleSfxVolume(e.target.value));
+                sfxVolume2.addEventListener('input', (e) => handleSfxVolume(e.target.value));
+            }
+            
+            setupTestButtons() {
+                document.getElementById('testMusicBtn').addEventListener('click', () => this.testMusic());
+                document.getElementById('testMusicBtn2').addEventListener('click', () => this.testMusic());
+                document.getElementById('testSfxBtn').addEventListener('click', () => this.testSfx());
+                document.getElementById('testSfxBtn2').addEventListener('click', () => this.testSfx());
+            }
+            
+            testMusic() {
+                console.log('🎵 Testing background music...');
+                this.enableAudio();
+                if (this.bgm) {
+                    const wasPlaying = !this.bgm.paused;
+                    const currentTime = this.bgm.currentTime;
+                    
+                    this.bgm.currentTime = 0;
+                    this.bgm.volume = this.musicVolume;
+                    const playPromise = this.bgm.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            console.log('🎵 BGM test successful');
+                            setTimeout(() => {
+                                if (wasPlaying) {
+                                    this.bgm.currentTime = currentTime;
+                                    this.bgm.play().catch(console.error);
+                                } else {
+                                    this.bgm.pause();
+                                    this.bgm.currentTime = currentTime;
+                                }
+                            }, 3000);
+                        }).catch(error => {
+                            console.error('❌ BGM test failed:', error);
+                            alert('Background music test failed. Check audio files and browser permissions.');
+                        });
+                    }
+                }
+            }
+            
+            testSfx() {
+                console.log('🔊 Testing sound effects...');
+                this.enableAudio();
+                setTimeout(() => this.playLazer(), 0);
+                setTimeout(() => this.playExplosion(), 500);
+                setTimeout(() => this.playWarning(), 1000);
+            }
+            
+            playBGM() {
+                console.log('🎵 Starting background music...');
+                this.enableAudio();
+                if (this.bgm && this.audioEnabled) {
+                    this.bgm.currentTime = 0;
+                    this.bgm.volume = this.musicVolume;
+                    this.bgm.loop = true;
+                    
+                    const playPromise = this.bgm.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            console.log('🎵 Background music playing');
+                            this.bgmPlaying = true;
+                        }).catch(error => {
+                            console.warn('⚠️ BGM autoplay prevented:', error);
+                            this.updateAudioStatus('🔇 Tap to enable audio');
+                        });
+                    }
+                }
+            }
+            
+            stopBGM() {
+                if (this.bgm) {
+                    this.bgm.pause();
+                    this.bgm.currentTime = 0;
+                    this.bgmPlaying = false;
+                }
+            }
+            
+            getAvailableSound(soundArray) {
+                for (let sound of soundArray) {
+                    if (sound.paused || sound.ended || sound.currentTime === 0) {
+                        return sound;
+                    }
+                }
+                return soundArray[0];
+            }
+            
+            playLazer() {
+                if (this.lazerSounds.length > 0 && this.audioEnabled) {
+                    const lazer = this.getAvailableSound(this.lazerSounds);
+                    lazer.currentTime = 0;
+                    lazer.volume = this.sfxVolume;
+                    lazer.play().then(() => {
+                        console.log('🔫 Laser sound played');
+                    }).catch(error => {
+                        console.warn('⚠️ Laser sound failed:', error);
+                    });
+                }
+            }
+            
+            playExplosion() {
+                if (this.explosionSounds.length > 0 && this.audioEnabled) {
+                    const explosion = this.getAvailableSound(this.explosionSounds);
+                    explosion.currentTime = 0;
+                    explosion.volume = this.sfxVolume;
+                    explosion.play().then(() => {
+                        console.log('💥 Explosion sound played');
+                    }).catch(error => {
+                        console.warn('⚠️ Explosion sound failed:', error);
+                    });
+                }
+            }
+            
+            playWarning() {
+                if (this.warningSounds.length > 0 && this.audioEnabled) {
+                    const warning = this.getAvailableSound(this.warningSounds);
+                    warning.currentTime = 0;
+                    warning.volume = this.sfxVolume;
+                    warning.play().then(() => {
+                        console.log('⚠️ Warning sound played');
+                    }).catch(error => {
+                        console.warn('⚠️ Warning sound failed:', error);
+                    });
+                }
+            }
+        }
+
+        // Enhanced Game Class with Multi-Platform Support
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.gunCanvas = document.getElementById('gunCanvas');
+                this.gunCtx = this.gunCanvas.getContext('2d');
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+                
+                // Initialize audio and device-specific features
+                this.audioManager = new AudioManager();
+                
+                // Setup virtual controls for mobile
+                if (deviceManager.isMobile) {
+                    this.virtualControls = new VirtualControls(this);
+                    // Optimize for mobile performance
+                    this.rayCount = 80; // Reduced ray count for mobile
+                    this.maxEnemies = 10; // Fewer enemies for mobile
+                } else {
+                    this.rayCount = 120; // Full quality for desktop
+                    this.maxEnemies = 15;
+                }
+                
+                // Game state
+                this.gameState = 'menu';
+                this.score = 0;
+                this.lives = 3;
+                this.wave = 1;
+                this.keys = {};
+                this.animationId = null;
+                
+                // Player
+                this.player = {
+                    x: 1.5,
+                    y: 1.5,
+                    angle: 0,
+                    fov: Math.PI / 3,
+                    speed: deviceManager.isMobile ? 0.025 : 0.03, // Slightly slower on mobile
+                    turnSpeed: deviceManager.isMobile ? 0.02 : 0.025
+                };
+                
+                // Map
+                this.map = [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,1,0,1,1,0,0,1,1,0,1,1,0,1],
+                    [1,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1],
+                    [1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1],
+                    [1,0,1,0,1,1,1,0,0,1,1,1,0,1,0,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,1,0,1,0,1,1,0,1,0,1,1,0,1],
+                    [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+                    [1,0,1,0,0,0,0,0,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,0,1,1,0,0,1,1,0,1,1,0,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ];
+                
+                this.mapWidth = this.map[0].length;
+                this.mapHeight = this.map.length;
+                
+                // Minimap settings (adjusted for mobile)
+                this.minimapSize = deviceManager.isMobile ? 100 : 120;
+                this.minimapX = this.width - this.minimapSize - (deviceManager.isMobile ? 5 : 10);
+                this.minimapY = deviceManager.isMobile ? 60 : 80;
+                
+                // Game objects
+                this.enemies = [];
+                this.lastSpawnTime = 0;
+                this.spawnInterval = 3000;
+                this.enemyTypes = ['red', 'blue', 'green', 'purple'];
+                
+                // Shooting and effects
+                this.shooting = false;
+                this.lastShot = 0;
+                this.shotCooldown = deviceManager.isMobile ? 250 : 200; // Slightly slower on mobile
+                this.bullets = [];
+                this.shellCasings = [];
+                this.muzzleFlashes = [];
+                this.bulletImpacts = [];
+                this.gunRecoil = 0;
+                
+                // Visual effects
+                this.explosions = [];
+                this.particles = [];
+                this.screenShake = 0;
+                this.time = 0;
+                
+                this.setupEventListeners();
+                this.drawGun();
+                
+                console.log(`🎮 Game initialized for ${deviceManager.isMobile ? 'mobile' : 'desktop'}`);
+                console.log(`   - Ray count: ${this.rayCount}`);
+                console.log(`   - Max enemies: ${this.maxEnemies}`);
+                console.log(`   - Player speed: ${this.player.speed}`);
+            }
+            
+            setupEventListeners() {
+                // Keyboard events (desktop and mobile)
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.code] = true;
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        this.shoot();
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                });
+                
+                // Menu buttons
+                document.getElementById('startButton').addEventListener('click', () => {
+                    this.startGame();
+                });
+                
+                document.getElementById('restartButton').addEventListener('click', () => {
+                    this.restartGame();
+                });
+                
+                // Prevent context menu on mobile
+                if (deviceManager.isMobile) {
+                    document.addEventListener('contextmenu', (e) => e.preventDefault());
+                    
+                    // Prevent zoom
+                    document.addEventListener('gesturestart', (e) => e.preventDefault());
+                    document.addEventListener('gesturechange', (e) => e.preventDefault());
+                    document.addEventListener('gestureend', (e) => e.preventDefault());
+                }
+            }
+            
+            startGame() {
+                console.log(`🎮 Starting game on ${deviceManager.isMobile ? 'mobile' : 'desktop'}...`);
+                this.audioManager.enableAudio();
+                this.gameState = 'playing';
+                this.lastSpawnTime = Date.now();
+                document.getElementById('menu').style.display = 'none';
+                
+                // Start background music
+                setTimeout(() => {
+                    this.audioManager.playBGM();
+                }, 100);
+                
+                this.gameLoop();
+            }
+            
+            restartGame() {
+                console.log('🎮 Restarting game...');
+                this.score = 0;
+                this.lives = 3;
+                this.wave = 1;
+                this.player.x = 1.5;
+                this.player.y = 1.5;
+                this.player.angle = 0;
+                this.enemies = [];
+                this.explosions = [];
+                this.particles = [];
+                this.bullets = [];
+                this.shellCasings = [];
+                this.muzzleFlashes = [];
+                this.bulletImpacts = [];
+                this.lastSpawnTime = Date.now();
+                this.gameState = 'playing';
+                document.getElementById('gameOverMenu').style.display = 'none';
+                
+                if (!this.audioManager.bgmPlaying) {
+                    setTimeout(() => {
+                        this.audioManager.playBGM();
+                    }, 100);
+                }
+                
+                this.gameLoop();
+            }
+            
+            // Enhanced drawGun method with mobile optimizations
+            drawGun() {
+                const ctx = this.gunCtx;
+                const width = this.gunCanvas.width;
+                const height = this.gunCanvas.height;
+                
+                ctx.clearRect(0, 0, width, height);
+                
+                const recoilOffset = this.gunRecoil * (deviceManager.isMobile ? 3 : 4);
+                const scale = deviceManager.isMobile ? 0.8 : 1; // Smaller gun on mobile
+                
+                // Gun grip
+                const gripGradient = ctx.createLinearGradient(0, height - 80 * scale, 0, height);
+                gripGradient.addColorStop(0, '#2a2a2a');
+                gripGradient.addColorStop(0.5, '#404040');
+                gripGradient.addColorStop(1, '#1a1a1a');
+                
+                ctx.fillStyle = gripGradient;
+                ctx.beginPath();
+                ctx.moveTo(width/2 - 22 * scale, height - 65 * scale + recoilOffset);
+                ctx.lineTo(width/2 + 22 * scale, height - 65 * scale + recoilOffset);
+                ctx.lineTo(width/2 + 18 * scale, height + recoilOffset);
+                ctx.lineTo(width/2 - 18 * scale, height + recoilOffset);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Simplified gun details for mobile performance
+                if (!deviceManager.isMobile) {
+                    // Full detail version for desktop
+                    this.drawFullGunDetails(ctx, width, height, scale, recoilOffset);
+                } else {
+                    // Simplified version for mobile
+                    this.drawSimplifiedGun(ctx, width, height, scale, recoilOffset);
+                }
+                
+                // Muzzle flashes (optimized for mobile)
+                this.drawMuzzleFlashes(ctx, width, height, scale, recoilOffset);
+                
+                // Shell casings (fewer on mobile)
+                this.drawShellCasings(ctx);
+            }
+            
+            drawFullGunDetails(ctx, width, height, scale, recoilOffset) {
+                // Full gun detail implementation (same as before but scaled)
+                // Gun body
+                const bodyGradient = ctx.createLinearGradient(0, height - 100 * scale, 0, height - 35 * scale);
+                bodyGradient.addColorStop(0, '#4a4a4a');
+                bodyGradient.addColorStop(0.3, '#606060');
+                bodyGradient.addColorStop(0.7, '#404040');
+                bodyGradient.addColorStop(1, '#2a2a2a');
+                
+                ctx.fillStyle = bodyGradient;
+                ctx.fillRect(width/2 - 35 * scale, height - 100 * scale + recoilOffset, 70 * scale, 35 * scale);
+                
+                // Barrel
+                const barrelGradient = ctx.createLinearGradient(0, height - 85 * scale, 0, height - 75 * scale);
+                barrelGradient.addColorStop(0, '#303030');
+                barrelGradient.addColorStop(0.5, '#505050');
+                barrelGradient.addColorStop(1, '#202020');
+                
+                ctx.fillStyle = barrelGradient;
+                ctx.fillRect(width/2 - 13 * scale, height - 135 * scale + recoilOffset, 26 * scale, 35 * scale);
+                
+                // Sight
+                ctx.fillStyle = '#333';
+                ctx.fillRect(width/2 - 2.5 * scale, height - 115 * scale + recoilOffset, 5 * scale, 12 * scale);
+                
+                ctx.fillStyle = '#ff6b6b';
+                ctx.fillRect(width/2 - 1 * scale, height - 113 * scale + recoilOffset, 2 * scale, 7 * scale);
+            }
+            
+            drawSimplifiedGun(ctx, width, height, scale, recoilOffset) {
+                // Simplified gun for mobile performance
+                ctx.fillStyle = '#404040';
+                ctx.fillRect(width/2 - 30 * scale, height - 90 * scale + recoilOffset, 60 * scale, 25 * scale);
+                
+                ctx.fillStyle = '#303030';
+                ctx.fillRect(width/2 - 10 * scale, height - 120 * scale + recoilOffset, 20 * scale, 30 * scale);
+                
+                ctx.fillStyle = '#ff6b6b';
+                ctx.fillRect(width/2 - 1 * scale, height - 110 * scale + recoilOffset, 2 * scale, 5 * scale);
+            }
+            
+            drawMuzzleFlashes(ctx, width, height, scale, recoilOffset) {
+                for (let flash of this.muzzleFlashes) {
+                    const flashProgress = (Date.now() - flash.time) / flash.duration;
+                    if (flashProgress < 1) {
+                        const alpha = 1 - flashProgress;
+                        const size = (18 + flashProgress * 35) * scale;
+                        
+                        ctx.globalAlpha = alpha;
+                        
+                        const flashGradient = ctx.createRadialGradient(
+                            width/2, height - 140 * scale + recoilOffset, 0,
+                            width/2, height - 140 * scale + recoilOffset, size
+                        );
+                        flashGradient.addColorStop(0, '#ffffff');
+                        flashGradient.addColorStop(0.3, '#ffff00');
+                        flashGradient.addColorStop(0.6, '#ff8800');
+                        flashGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                        
+                        ctx.fillStyle = flashGradient;
+                        ctx.beginPath();
+                        ctx.arc(width/2, height - 140 * scale + recoilOffset, size, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.globalAlpha = 1;
+                    }
+                }
+            }
+            
+            drawShellCasings(ctx) {
+                const maxCasings = deviceManager.isMobile ? 3 : 8; // Fewer casings on mobile
+                let casingsDrawn = 0;
+                
+                for (let casing of this.shellCasings) {
+                    if (casingsDrawn >= maxCasings) break;
+                    
+                    const progress = (Date.now() - casing.time) / casing.duration;
+                    if (progress < 1) {
+                        const x = casing.startX + casing.vx * progress;
+                        const y = casing.startY + casing.vy * progress + 0.5 * 400 * progress * progress;
+                        
+                        ctx.fillStyle = '#cc9900';
+                        ctx.save();
+                        ctx.translate(x, y);
+                        ctx.rotate(progress * Math.PI * 4);
+                        ctx.fillRect(-2.5, -1, 5, 2);
+                        ctx.restore();
+                        
+                        casingsDrawn++;
+                    }
+                }
+            }
+            
+            // Enhanced shoot method with mobile haptic feedback
+            shoot() {
+                if (this.gameState !== 'playing') return;
+                
+                const now = Date.now();
+                if (now - this.lastShot < this.shotCooldown) return;
+                
+                this.lastShot = now;
+                this.shooting = true;
+                this.gunRecoil = 1;
+                
+                // Mobile haptic feedback
+                if (deviceManager.isMobile && navigator.vibrate) {
+                    navigator.vibrate(50); // Short vibration
+                }
+                
+                this.audioManager.playLazer();
+                
+                const gunContainer = document.getElementById('gunContainer');
+                gunContainer.classList.add('shooting');
+                
+                this.muzzleFlashes.push({
+                    time: now,
+                    duration: 150
+                });
+                
+                this.shellCasings.push({
+                    startX: this.gunCanvas.width/2 + 30,
+                    startY: this.gunCanvas.height - 97,
+                    vx: 80 + Math.random() * 40,
+                    vy: -40 - Math.random() * 25,
+                    time: now,
+                    duration: 1000
+                });
+                
+                this.createBullet();
+                
+                setTimeout(() => {
+                    gunContainer.classList.remove('shooting');
+                    this.shooting = false;
+                }, 100);
+            }
+            
+            // Optimized update method with mobile performance considerations
+            update() {
+                if (this.gameState !== 'playing') return;
+                
+                this.time += 16;
+                
+                this.handleInput();
+                this.updateEnemies();
+                this.updateBullets();
+                this.updateExplosions();
+                
+                // Reduce particle updates on mobile for performance
+                if (!deviceManager.isMobile || this.time % 2 === 0) {
+                    this.updateParticles();
+                }
+                
+                this.updateSpawning();
+                this.updateGunEffects();
+                this.updateUI();
+                this.drawGun();
+                
+                if (this.screenShake > 0) {
+                    this.screenShake -= 16;
+                }
+                
+                if (this.gunRecoil > 0) {
+                    this.gunRecoil *= 0.9;
+                }
+            }
+            
+            // Enhanced takeDamage with mobile haptic feedback
+            takeDamage() {
+                this.lives--;
+                this.addScreenShake();
+                
+                // Strong haptic feedback for mobile
+                if (deviceManager.isMobile && navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100]); // Pattern vibration
+                }
+                
+                this.audioManager.playWarning();
+                
+                if (this.lives <= 0) {
+                    this.gameOver();
+                } else {
+                    this.player.x = 1.5;
+                    this.player.y = 1.5;
+                }
+            }
+            
+            // All other methods remain the same but with mobile optimizations where needed
+            // (Including spawnEnemy, createBullet, updateBullets, etc.)
+            
+            spawnEnemy() {
+                if (this.enemies.length >= this.maxEnemies) return;
+                
+                const spawnPoints = [
+                    {x: 3.5, y: 3.5}, {x: 8.5, y: 2.5}, {x: 5.5, y: 7.5},
+                    {x: 12.5, y: 9.5}, {x: 2.5, y: 10.5}, {x: 14.5, y: 5.5},
+                    {x: 6.5, y: 4.5}, {x: 9.5, y: 8.5}, {x: 4.5, y: 9.5},
+                    {x: 11.5, y: 3.5}, {x: 7.5, y: 6.5}, {x: 13.5, y: 7.5},
+                    {x: 2.5, y: 6.5}, {x: 10.5, y: 10.5}, {x: 14.5, y: 2.5}
+                ];
+                
+                const validSpawns = spawnPoints.filter(spawn => {
+                    const dx = spawn.x - this.player.x;
+                    const dy = spawn.y - this.player.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    return distance > 4;
+                });
+                
+                if (validSpawns.length === 0) return;
+                
+                const spawn = validSpawns[Math.floor(Math.random() * validSpawns.length)];
+                const enemyType = this.enemyTypes[Math.floor(Math.random() * this.enemyTypes.length)];
+                
+                this.enemies.push({
+                    x: spawn.x,
+                    y: spawn.y,
+                    alive: true,
+                    health: 1,
+                    lastHit: 0,
+                    type: enemyType,
+                    animTime: Math.random() * 1000,
+                    moveSpeed: 0.008 + Math.random() * 0.004
+                });
+            }
+            
+            createBullet() {
+                const bullet = {
+                    x: this.player.x,
+                    y: this.player.y,
+                    angle: this.player.angle,
+                    speed: 0.2,
+                    distance: 0,
+                    maxDistance: 20,
+                    trail: [],
+                    time: Date.now()
+                };
+                
+                this.bullets.push(bullet);
+            }
+            
+            updateBullets() {
+                for (let i = this.bullets.length - 1; i >= 0; i--) {
+                    const bullet = this.bullets[i];
+                    
+                    const dx = Math.cos(bullet.angle) * bullet.speed;
+                    const dy = Math.sin(bullet.angle) * bullet.speed;
+                    
+                    bullet.x += dx;
+                    bullet.y += dy;
+                    bullet.distance += bullet.speed;
+                    
+                    bullet.trail.push({x: bullet.x, y: bullet.y, time: Date.now()});
+                    
+                    if (bullet.trail.length > (deviceManager.isMobile ? 5 : 8)) {
+                        bullet.trail.shift();
+                    }
+                    
+                    if (this.isWall(Math.floor(bullet.x), Math.floor(bullet.y))) {
+                        this.createBulletImpact(bullet.x, bullet.y);
+                        this.bullets.splice(i, 1);
+                        continue;
+                    }
+                    
+                    let hit = false;
+                    for (let enemy of this.enemies) {
+                        if (!enemy.alive) continue;
+                        
+                        const distance = Math.sqrt(
+                            Math.pow(bullet.x - enemy.x, 2) + Math.pow(bullet.y - enemy.y, 2)
+                        );
+                        
+                        if (distance < 0.4) {
+                            this.hitEnemy(enemy);
+                            this.bullets.splice(i, 1);
+                            hit = true;
+                            break;
+                        }
+                    }
+                    
+                    if (hit) continue;
+                    
+                    if (bullet.distance >= bullet.maxDistance) {
+                        this.bullets.splice(i, 1);
+                    }
+                }
+            }
+            
+            createBulletImpact(x, y) {
+                this.bulletImpacts.push({
+                    x: x,
+                    y: y,
+                    time: Date.now(),
+                    duration: 300
+                });
+                
+                const particleCount = deviceManager.isMobile ? 3 : 6;
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 0.01 + Math.random() * 0.02;
+                    const life = 200 + Math.random() * 100;
+                    
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: life,
+                        maxLife: life,
+                        size: 1 + Math.random() * 2,
+                        type: 'impact'
+                    });
+                }
+            }
+            
+            hitEnemy(enemy) {
+                enemy.health--;
+                enemy.lastHit = Date.now();
+                
+                if (enemy.health <= 0) {
+                    enemy.alive = false;
+                    this.score += 100;
+                    this.createExplosion(enemy.x, enemy.y);
+                    this.addScreenShake();
+                    
+                    if (deviceManager.isMobile && navigator.vibrate) {
+                        navigator.vibrate(75);
+                    }
+                    
+                    this.audioManager.playExplosion();
+                    
+                    setTimeout(() => {
+                        this.enemies = this.enemies.filter(e => e.alive);
+                    }, 500);
+                    
+                    const newWave = Math.floor(this.score / 1000) + 1;
+                    if (newWave > this.wave) {
+                        this.wave = newWave;
+                        this.spawnInterval = Math.max(1000, 3000 - (this.wave * 200));
+                    }
+                }
+            }
+            
+            createExplosion(x, y) {
+                this.explosions.push({
+                    x: x,
+                    y: y,
+                    time: Date.now(),
+                    duration: 800
+                });
+                
+                const particleCount = deviceManager.isMobile ? 12 : 18;
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.5;
+                    const speed = 0.02 + Math.random() * 0.03;
+                    const life = 500 + Math.random() * 300;
+                    
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: life,
+                        maxLife: life,
+                        size: 3 + Math.random() * 4,
+                        type: 'explosion'
+                    });
+                }
+            }
+            
+            addScreenShake() {
+                this.screenShake = 200;
+                document.getElementById('gameContainer').classList.add('screen-shake');
+                setTimeout(() => {
+                    document.getElementById('gameContainer').classList.remove('screen-shake');
+                }, 200);
+            }
+            
+            handleInput() {
+                let moveX = 0;
+                let moveY = 0;
+                
+                if (this.keys['ArrowUp']) {
+                    moveX += Math.cos(this.player.angle) * this.player.speed;
+                    moveY += Math.sin(this.player.angle) * this.player.speed;
+                }
+                if (this.keys['ArrowDown']) {
+                    moveX -= Math.cos(this.player.angle) * this.player.speed;
+                    moveY -= Math.sin(this.player.angle) * this.player.speed;
+                }
+                if (this.keys['ArrowLeft']) {
+                    this.player.angle -= this.player.turnSpeed;
+                }
+                if (this.keys['ArrowRight']) {
+                    this.player.angle += this.player.turnSpeed;
+                }
+                
+                const newX = this.player.x + moveX;
+                const newY = this.player.y + moveY;
+                
+                if (!this.isWall(Math.floor(newX), Math.floor(this.player.y))) {
+                    this.player.x = newX;
+                }
+                if (!this.isWall(Math.floor(this.player.x), Math.floor(newY))) {
+                    this.player.y = newY;
+                }
+                
+                for (let enemy of this.enemies) {
+                    if (!enemy.alive) continue;
+                    
+                    const distance = Math.sqrt(
+                        Math.pow(this.player.x - enemy.x, 2) + Math.pow(this.player.y - enemy.y, 2)
+                    );
+                    
+                    if (distance < 0.4) {
+                        this.takeDamage();
+                        break;
+                    }
+                }
+            }
+            
+            updateEnemies() {
+                for (let enemy of this.enemies) {
+                    if (!enemy.alive) continue;
+                    
+                    enemy.animTime += 16;
+                    
+                    const dx = this.player.x - enemy.x;
+                    const dy = this.player.y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 0.5) {
+                        const moveX = (dx / distance) * enemy.moveSpeed;
+                        const moveY = (dy / distance) * enemy.moveSpeed;
+                        
+                        const newX = enemy.x + moveX;
+                        const newY = enemy.y + moveY;
+                        
+                        if (!this.isWall(Math.floor(newX), Math.floor(enemy.y))) {
+                            enemy.x = newX;
+                        }
+                        if (!this.isWall(Math.floor(enemy.x), Math.floor(newY))) {
+                            enemy.y = newY;
+                        }
+                    }
+                }
+            }
+            
+            updateExplosions() {
+                const now = Date.now();
+                this.explosions = this.explosions.filter(explosion => 
+                    now - explosion.time < explosion.duration
+                );
+            }
+            
+            updateParticles() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const particle = this.particles[i];
+                    
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.life -= 16;
+                    
+                    if (particle.type === 'explosion') {
+                        particle.vy += 0.0002;
+                    }
+                    
+                    if (particle.life <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+            }
+            
+            updateSpawning() {
+                const now = Date.now();
+                if (now - this.lastSpawnTime > this.spawnInterval) {
+                    this.spawnEnemy();
+                    this.lastSpawnTime = now;
+                }
+            }
+            
+            updateGunEffects() {
+                const now = Date.now();
+                
+                this.muzzleFlashes = this.muzzleFlashes.filter(flash => 
+                    now - flash.time < flash.duration
+                );
+                
+                this.shellCasings = this.shellCasings.filter(casing => 
+                    now - casing.time < casing.duration
+                );
+                
+                this.bulletImpacts = this.bulletImpacts.filter(impact => 
+                    now - impact.time < impact.duration
+                );
+            }
+            
+            updateUI() {
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('lives').textContent = this.lives;
+                document.getElementById('enemies').textContent = this.enemies.filter(e => e.alive).length;
+                document.getElementById('wave').textContent = this.wave;
+            }
+            
+            gameOver() {
+                this.gameState = 'gameOver';
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('finalWave').textContent = this.wave;
+                document.getElementById('gameOverMenu').style.display = 'block';
+                
+                if (deviceManager.isMobile && navigator.vibrate) {
+                    navigator.vibrate([200, 100, 200, 100, 200]);
+                }
+                
+                this.audioManager.playWarning();
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+            }
+            
+            isWall(x, y) {
+                if (x < 0 || x >= this.mapWidth || y < 0 || y >= this.mapHeight) {
+                    return true;
+                }
+                return this.map[y][x] === 1;
+            }
+            
+            hasLineOfSight(x1, y1, x2, y2) {
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const steps = Math.floor(distance * (deviceManager.isMobile ? 15 : 20));
+                
+                const stepX = dx / steps;
+                const stepY = dy / steps;
+                
+                for (let i = 0; i <= steps; i++) {
+                    const checkX = x1 + stepX * i;
+                    const checkY = y1 + stepY * i;
+                    
+                    if (this.isWall(Math.floor(checkX), Math.floor(checkY))) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            castRay(angle) {
+                let rayX = this.player.x;
+                let rayY = this.player.y;
+                const rayDirX = Math.cos(angle);
+                const rayDirY = Math.sin(angle);
+                const step = deviceManager.isMobile ? 0.025 : 0.02; // Slightly larger steps on mobile for performance
+                let distance = 0;
+                
+                while (distance < 20) {
+                    rayX += rayDirX * step;
+                    rayY += rayDirY * step;
+                    distance += step;
+                    
+                    if (this.isWall(Math.floor(rayX), Math.floor(rayY))) {
+                        break;
+                    }
+                }
+                
+                return distance;
+            }
+            
+            getEnemyColor(type) {
+                const colors = {
+                    red: '#ff3333',
+                    blue: '#3333ff',
+                    green: '#33ff33',
+                    purple: '#ff33ff'
+                };
+                return colors[type] || '#ff3333';
+            }
+            
+            renderMinimap() {
+                const mapScale = this.minimapSize / Math.max(this.mapWidth, this.mapHeight);
+                
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                this.ctx.fillRect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize);
+                
+                this.ctx.strokeStyle = '#ff6b6b';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(this.minimapX, this.minimapY, this.minimapSize, this.minimapSize);
+                
+                this.ctx.fillStyle = '#666';
+                for (let y = 0; y < this.mapHeight; y++) {
+                    for (let x = 0; x < this.mapWidth; x++) {
+                        if (this.map[y][x] === 1) {
+                            const mapX = this.minimapX + x * mapScale;
+                            const mapY = this.minimapY + y * mapScale;
+                            this.ctx.fillRect(mapX, mapY, mapScale, mapScale);
+                        }
+                    }
+                }
+                
+                for (let enemy of this.enemies) {
+                    if (!enemy.alive) continue;
+                    
+                    const mapX = this.minimapX + enemy.x * mapScale;
+                    const mapY = this.minimapY + enemy.y * mapScale;
+                    
+                    this.ctx.fillStyle = this.getEnemyColor(enemy.type);
+                    this.ctx.beginPath();
+                    this.ctx.arc(mapX, mapY, deviceManager.isMobile ? 2 : 2.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                
+                const playerMapX = this.minimapX + this.player.x * mapScale;
+                const playerMapY = this.minimapY + this.player.y * mapScale;
+                
+                this.ctx.fillStyle = '#00ff00';
+                this.ctx.beginPath();
+                this.ctx.arc(playerMapX, playerMapY, deviceManager.isMobile ? 3 : 3.5, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.strokeStyle = '#00ff00';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(playerMapX, playerMapY);
+                const dirLength = deviceManager.isMobile ? 10 : 12;
+                const endX = playerMapX + Math.cos(this.player.angle) * dirLength;
+                const endY = playerMapY + Math.sin(this.player.angle) * dirLength;
+                this.ctx.lineTo(endX, endY);
+                this.ctx.stroke();
+            }
+            
+            render() {
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+                
+                if (this.gameState !== 'playing') return;
+                
+                this.render3D();
+                this.renderBullets();
+                this.renderEnemies();
+                this.renderExplosions();
+                this.renderParticles();
+                this.renderBulletImpacts();
+                this.renderMinimap();
+            }
+            
+            render3D() {
+                const stripWidth = this.width / this.rayCount;
+                
+                for (let i = 0; i < this.rayCount; i++) {
+                    const rayAngle = this.player.angle - this.player.fov / 2 + (i / this.rayCount) * this.player.fov;
+                    const distance = this.castRay(rayAngle);
+                    
+                    const correctedDistance = distance * Math.cos(rayAngle - this.player.angle);
+                    
+                    const wallHeight = (this.height / correctedDistance) * 0.8;
+                    const wallTop = (this.height - wallHeight) / 2;
+                    
+                    const brightness = Math.max(50, 255 - correctedDistance * 15);
+                    
+                    // Sky
+                    this.ctx.fillStyle = '#001122';
+                    this.ctx.fillRect(i * stripWidth, 0, stripWidth, wallTop);
+                    
+                    // Wall
+                    this.ctx.fillStyle = `rgb(${brightness * 0.4}, ${brightness * 0.6}, ${brightness})`;
+                    this.ctx.fillRect(i * stripWidth, wallTop, stripWidth, wallHeight);
+                    
+                    // Floor
+                    this.ctx.fillStyle = '#332222';
+                    this.ctx.fillRect(i * stripWidth, wallTop + wallHeight, stripWidth, this.height - wallTop - wallHeight);
+                }
+            }
+            
+            // Optimized rendering methods for mobile
+            renderBullets() {
+                const maxBullets = deviceManager.isMobile ? 5 : 10; // Limit bullets rendered on mobile
+                let bulletsRendered = 0;
+                
+                for (let bullet of this.bullets) {
+                    if (bulletsRendered >= maxBullets) break;
+                    
+                    const dx = bullet.x - this.player.x;
+                    const dy = bullet.y - this.player.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 8) continue;
+                    
+                    if (!this.hasLineOfSight(this.player.x, this.player.y, bullet.x, bullet.y)) {
+                        continue;
+                    }
+                    
+                    const bulletAngle = Math.atan2(dy, dx);
+                    let angleDiff = bulletAngle - this.player.angle;
+                    
+                    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                    
+                    if (Math.abs(angleDiff) > this.player.fov / 2) continue;
+                    
+                    const screenX = (angleDiff / this.player.fov + 0.5) * this.width;
+                    const bulletSize = (this.height / distance) * 0.04;
+                    const bulletY = this.height / 2;
+                    
+                    // Simplified bullet trail for mobile
+                    if (!deviceManager.isMobile && bullet.trail.length > 1) {
+                        this.ctx.strokeStyle = 'rgba(255, 255, 100, 0.8)';
+                        this.ctx.lineWidth = Math.max(1, bulletSize);
+                        this.ctx.beginPath();
+                        
+                        for (let i = 1; i < bullet.trail.length; i++) {
+                            const trailPoint = bullet.trail[i];
+                            const trailDx = trailPoint.x - this.player.x;
+                            const trailDy = trailPoint.y - this.player.y;
+                            
+                            const trailAngle = Math.atan2(trailDy, trailDx);
+                            let trailAngleDiff = trailAngle - this.player.angle;
+                            
+                            while (trailAngleDiff > Math.PI) trailAngleDiff -= 2 * Math.PI;
+                            while (trailAngleDiff < -Math.PI) trailAngleDiff += 2 * Math.PI;
+                            
+                            if (Math.abs(trailAngleDiff) <= this.player.fov / 2) {
+                                const trailScreenX = (trailAngleDiff / this.player.fov + 0.5) * this.width;
+                                const trailY = this.height / 2;
+                                
+                                if (i === 1) {
+                                    this.ctx.moveTo(trailScreenX, trailY);
+                                } else {
+                                    this.ctx.lineTo(trailScreenX, trailY);
+                                }
+                            }
+                        }
+                        
+                        this.ctx.stroke();
+                    }
+                    
+                    // Draw bullet
+                    this.ctx.fillStyle = '#ffff00';
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenX, bulletY, bulletSize, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    if (!deviceManager.isMobile) {
+                        // Bullet glow (desktop only)
+                        this.ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                        this.ctx.beginPath();
+                        this.ctx.arc(screenX, bulletY, bulletSize * 2, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                    
+                    bulletsRendered++;
+                }
+            }
+            
+            renderBulletImpacts() {
+                const now = Date.now();
+                const maxImpacts = deviceManager.isMobile ? 3 : 8;
+                let impactsRendered = 0;
+                
+                for (let impact of this.bulletImpacts) {
+                    if (impactsRendered >= maxImpacts) break;
+                    
+                    const elapsed = now - impact.time;
+                    const progress = elapsed / impact.duration;
+                    
+                    if (progress >= 1) continue;
+                    
+                    const dx = impact.x - this.player.x;
+                    const dy = impact.y - this.player.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 8) continue;
+                    
+                    const impactAngle = Math.atan2(dy, dx);
+                    let angleDiff = impactAngle - this.player.angle;
+                    
+                    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                    
+                    if (Math.abs(angleDiff) > this.player.fov / 2) continue;
+                    
+                    const screenX = (angleDiff / this.player.fov + 0.5) * this.width;
+                    const impactSize = (this.height / distance) * 0.15 * (1 + progress);
+                    const impactY = this.height / 2;
+                    
+                    const alpha = 1 - progress;
+                    this.ctx.globalAlpha = alpha;
+                    
+                    // Impact flash
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenX, impactY, impactSize * 0.3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    if (!deviceManager.isMobile) {
+                        // Impact sparks (desktop only for performance)
+                        this.ctx.strokeStyle = '#ffaa00';
+                        this.ctx.lineWidth = 2;
+                        for (let i = 0; i < 6; i++) {
+                            const sparkAngle = (i / 6) * Math.PI * 2;
+                            const sparkLength = impactSize * 0.5;
+                            
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(screenX, impactY);
+                            this.ctx.lineTo(
+                                screenX + Math.cos(sparkAngle) * sparkLength,
+                                impactY + Math.sin(sparkAngle) * sparkLength
+                            );
+                            this.ctx.stroke();
+                        }
+                    }
+                    
+                    this.ctx.globalAlpha = 1;
+                    impactsRendered++;
+                }
+            }
+            
+            renderEnemies() {
+                const maxEnemies = deviceManager.isMobile ? 8 : 15;
+                let enemiesRendered = 0;
+                
+                for (let enemy of this.enemies) {
+                    if (!enemy.alive || enemiesRendered >= maxEnemies) continue;
+                    
+                    const dx = enemy.x - this.player.x;
+                    const dy = enemy.y - this.player.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 8) continue;
+                    
+                    if (!this.hasLineOfSight(this.player.x, this.player.y, enemy.x, enemy.y)) {
+                        continue;
+                    }
+                    
+                    const enemyAngle = Math.atan2(dy, dx);
+                    let angleDiff = enemyAngle - this.player.angle;
+                    
+                    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                    
+                    if (Math.abs(angleDiff) > this.player.fov / 2) continue;
+                    
+                    const screenX = (angleDiff / this.player.fov + 0.5) * this.width;
+                    const enemySize = (this.height / distance) * 0.4;
+                    const enemyY = this.height / 2 - enemySize / 2;
+                    
+                    const now = Date.now();
+                    const isFlashing = (now - enemy.lastHit) < 200;
+                    const bobOffset = Math.sin(enemy.animTime * 0.005) * 2.5;
+                    
+                    // Simplified enemy rendering for mobile
+                    if (deviceManager.isMobile) {
+                        // Simple rectangle enemy for mobile
+                        this.ctx.fillStyle = isFlashing ? '#fff' : this.getEnemyColor(enemy.type);
+                        this.ctx.fillRect(screenX - enemySize / 2, enemyY + bobOffset, enemySize, enemySize * 0.8);
+                        
+                        // Simple eyes
+                        const eyeGlow = Math.sin(enemy.animTime * 0.01) * 0.3 + 0.7;
+                        this.ctx.fillStyle = `rgba(255, 255, 0, ${eyeGlow})`;
+                        this.ctx.fillRect(screenX - enemySize * 0.1, enemyY - enemySize * 0.05 + bobOffset, enemySize * 0.06, enemySize * 0.06);
+                        this.ctx.fillRect(screenX + enemySize * 0.04, enemyY - enemySize * 0.05 + bobOffset, enemySize * 0.06, enemySize * 0.06);
+                    } else {
+                        // Full detail enemy for desktop
+                        // Enemy body
+                        this.ctx.fillStyle = isFlashing ? '#fff' : this.getEnemyColor(enemy.type);
+                        this.ctx.fillRect(screenX - enemySize / 2, enemyY + bobOffset, enemySize, enemySize * 0.8);
+                        
+                        // Enemy head
+                        this.ctx.beginPath();
+                        this.ctx.arc(screenX, enemyY + bobOffset, enemySize * 0.25, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        // Eyes
+                        const eyeGlow = Math.sin(enemy.animTime * 0.01) * 0.3 + 0.7;
+                        this.ctx.fillStyle = `rgba(255, 255, 0, ${eyeGlow})`;
+                        this.ctx.beginPath();
+                        this.ctx.arc(screenX - enemySize * 0.08, enemyY - enemySize * 0.08 + bobOffset, enemySize * 0.04, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.beginPath();
+                        this.ctx.arc(screenX + enemySize * 0.08, enemyY - enemySize * 0.08 + bobOffset, enemySize * 0.04, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        // Mouth
+                        this.ctx.fillStyle = '#000';
+                        this.ctx.fillRect(screenX - enemySize * 0.06, enemyY + enemySize * 0.04 + bobOffset, enemySize * 0.12, enemySize * 0.04);
+                        
+                        // Arms with animation
+                        const armSwing = Math.sin(enemy.animTime * 0.008) * 0.15;
+                        this.ctx.fillStyle = isFlashing ? '#fff' : this.getEnemyColor(enemy.type);
+                        this.ctx.fillRect(screenX - enemySize * 0.55, enemyY + enemySize * 0.15 + bobOffset + armSwing, enemySize * 0.12, enemySize * 0.35);
+                        this.ctx.fillRect(screenX + enemySize * 0.43, enemyY + enemySize * 0.15 + bobOffset - armSwing, enemySize * 0.12, enemySize * 0.35);
+                    }
+                    
+                    enemiesRendered++;
+                }
+            }
+            
+            renderExplosions() {
+                const now = Date.now();
+                const maxExplosions = deviceManager.isMobile ? 5 : 10;
+                let explosionsRendered = 0;
+                
+                for (let explosion of this.explosions) {
+                    if (explosionsRendered >= maxExplosions) break;
+                    
+                    const elapsed = now - explosion.time;
+                    const progress = elapsed / explosion.duration;
+                    
+                    if (progress >= 1) continue;
+                    
+                    const dx = explosion.x - this.player.x;
+                    const dy = explosion.y - this.player.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 8) continue;
+                    
+                    if (!this.hasLineOfSight(this.player.x, this.player.y, explosion.x, explosion.y)) {
+                        continue;
+                    }
+                    
+                    const explosionAngle = Math.atan2(dy, dx);
+                    let angleDiff = explosionAngle - this.player.angle;
+                    
+                    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                    
+                    if (Math.abs(angleDiff) > this.player.fov / 2) continue;
+                    
+                    const screenX = (angleDiff / this.player.fov + 0.5) * this.width;
+                    const explosionSize = (this.height / distance) * 0.6 * (1 + progress * 2);
+                    const explosionY = this.height / 2 - explosionSize / 2;
+                    
+                    const alpha = 1 - progress;
+                    this.ctx.globalAlpha = alpha;
+                    
+                    if (progress < 0.3) {
+                        this.ctx.fillStyle = '#ffffff';
+                    } else if (progress < 0.5) {
+                        this.ctx.fillStyle = '#ffff00';
+                    } else if (progress < 0.7) {
+                        this.ctx.fillStyle = '#ff8800';
+                    } else {
+                        this.ctx.fillStyle = '#ff0000';
+                    }
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenX, explosionY + explosionSize / 2, explosionSize * 0.25, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    if (!deviceManager.isMobile) {
+                        // Explosion ring (desktop only)
+                        this.ctx.strokeStyle = this.ctx.fillStyle;
+                        this.ctx.lineWidth = explosionSize * 0.04;
+                        this.ctx.beginPath();
+                        this.ctx.arc(screenX, explosionY + explosionSize / 2, explosionSize * 0.4, 0, Math.PI * 2);
+                        this.ctx.stroke();
+                    }
+                    
+                    this.ctx.globalAlpha = 1;
+                    explosionsRendered++;
+                }
+            }
+            
+            renderParticles() {
+                const maxParticles = deviceManager.isMobile ? 20 : 50;
+                let particlesRendered = 0;
+                
+                for (let particle of this.particles) {
+                    if (particlesRendered >= maxParticles) break;
+                    
+                    const dx = particle.x - this.player.x;
+                    const dy = particle.y - this.player.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 6) continue;
+                    
+                    const particleAngle = Math.atan2(dy, dx);
+                    let angleDiff = particleAngle - this.player.angle;
+                    
+                    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                    
+                    if (Math.abs(angleDiff) > this.player.fov / 2) continue;
+                    
+                    const screenX = (angleDiff / this.player.fov + 0.5) * this.width;
+                    const particleSize = (this.height / distance) * particle.size * 0.008;
+                    const particleY = this.height / 2;
+                    
+                    const alpha = particle.life / particle.maxLife;
+                    this.ctx.globalAlpha = alpha;
+                    
+                    if (particle.type === 'explosion') {
+                        const hue = alpha * 60;
+                        this.ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                    } else if (particle.type === 'impact') {
+                        this.ctx.fillStyle = '#ffaa00';
+                    } else {
+                        this.ctx.fillStyle = '#ffff00';
+                    }
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenX, particleY, Math.max(1, particleSize), 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    this.ctx.globalAlpha = 1;
+                    particlesRendered++;
+                }
+            }
+            
+            gameLoop() {
+                if (this.gameState === 'playing') {
+                    this.update();
+                    this.render();
+                    this.animationId = requestAnimationFrame(() => this.gameLoop());
+                }
+            }
+        }
+        
+        // Initialize the application
+        let deviceManager;
+        let game;
+        
+        window.addEventListener('load', () => {
+            console.log('🚀 Multi-Platform 3D Maze Shooter Loading...');
+            
+            // Initialize device detection first
+            deviceManager = new DeviceManager();
+            
+            // Wait a moment for canvas setup, then initialize game
+            setTimeout(() => {
+                game = new Game();
+                console.log('🎮 Multi-Platform Game Ready!');
+                console.log(`   Platform: ${deviceManager.isMobile ? 'Mobile 📱' : 'Desktop 🖥️'}`);
+                console.log(`   Controls: ${deviceManager.isMobile ? 'Touch' : 'Keyboard'}`);
+                console.log('   Audio: Continuous BGM with layered SFX');
+                console.log('   Performance: Optimized for platform');
+            }, 100);
+        });
+        
+        // Handle orientation changes on mobile
+        window.addEventListener('orientationchange', () => {
+            if (deviceManager && deviceManager.isMobile) {
+                setTimeout(() => {
+                    console.log('📱 Orientation changed, adjusting layout...');
+                    deviceManager.setupCanvasSize();
+                    if (game) {
+                        game.width = game.canvas.width;
+                        game.height = game.canvas.height;
+                        game.minimapX = game.width - game.minimapSize - 5;
+                    }
+                }, 100);
+            }
+        });
+        
+        // Handle visibility changes (pause/resume audio)
+        document.addEventListener('visibilitychange', () => {
+            if (game && game.audioManager) {
+                if (document.visibilityState === 'hidden') {
+                    // Game is hidden, but keep BGM playing
+                    console.log('🎮 Game hidden, BGM continues...');
+                } else {
+                    // Game is visible again
+                    console.log('🎮 Game visible, checking audio...');
+                    if (!game.audioManager.bgmPlaying && game.gameState === 'playing') {
+                        game.audioManager.playBGM();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
