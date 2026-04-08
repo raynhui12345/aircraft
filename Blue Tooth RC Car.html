@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ESP32 遙控車控制台</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --btn-color: #16213e;
+            --accent-color: #0f3460;
+            --active-color: #e94560;
+            --success-color: #27ae60;
+            --text-color: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+        }
+
+        /* 頂部控制列 */
+        header {
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid var(--accent-color);
+        }
+
+        #connectBtn {
+            padding: 12px 28px;
+            font-size: 1.1rem;
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transition: background 0.3s;
+        }
+
+        #connectBtn:active {
+            transform: scale(0.95);
+        }
+
+        #status {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: #bdc3c7;
+        }
+
+        /* 搖控佈局區域 */
+        .controller-container {
+            flex: 1;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .direction-btn {
+            width: 120px;
+            height: 120px;
+            background-color: var(--btn-color);
+            border: 4px solid var(--accent-color);
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            transition: all 0.1s;
+        }
+
+        /* 觸控按下效果 */
+        .direction-btn:active {
+            background-color: var(--active-color);
+            border-color: #ff6b81;
+            transform: scale(0.9);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .side-label {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            color: #8e94af;
+            text-transform: uppercase;
+        }
+
+        /* 隱藏預設藍牙按鈕後的樣式 */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button id="connectBtn">連接 ESP32_Remote_Car</button>
+        <div id="status">等待連線...</div>
+    </header>
+
+    <main class="controller-container">
+        <div class="control-group">
+            <div class="direction-btn" id="btn-F">前</div>
+            <div class="direction-btn" id="btn-B">後</div>
+            <div class="side-label">Drive</div>
+        </div>
+
+        <div class="control-group">
+            <div class="direction-btn" id="btn-L">左</div>
+            <div class="direction-btn" id="btn-R">右</div>
+            <div class="side-label">Steer</div>
+        </div>
+    </main>
+
+    <script>
+        let bleCharacteristic;
+        const TARGET_DEVICE_NAME = "ESP32_Remote_Car";
+        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+
+        const connectBtn = document.getElementById('connectBtn');
+        const statusText = document.getElementById('status');
+
+        // 藍牙搜尋與連接
+        connectBtn.addEventListener('click', async () => {
+            try {
+                statusText.innerText = `正在搜尋 ${TARGET_DEVICE_NAME}...`;
+                
+                // 修改處：精確搜尋名稱為 ESP32_Remote_Car 的設備
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: TARGET_DEVICE_NAME }],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                statusText.innerText = "正在建立 GATT 連線...";
+                const server = await device.gatt.connect();
+                
+                statusText.innerText = "正在取得服務...";
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                bleCharacteristic = await service.getCharacteristic(TX_CHARACTERISTIC_UUID);
+
+                statusText.innerText = `已成功連線至 ${device.name}`;
+                statusText.style.color = "#2ecc71";
+                connectBtn.classList.add('hidden'); // 連線成功後隱藏按鈕
+
+            } catch (error) {
+                console.error(error);
+                statusText.innerText = "連線失敗：" + error.message;
+                statusText.style.color = "#e74c3c";
+            }
+        });
+
+        // 發送字元指令給 ESP32
+        async function sendCommand(cmd) {
+            if (bleCharacteristic) {
+                try {
+                    const encoder = new TextEncoder();
+                    await bleCharacteristic.writeValue(encoder.encode(cmd));
+                    console.log("Sent:", cmd);
+                } catch (e) {
+                    console.error("Transmission error", e);
+                }
+            }
+        }
+
+        // 綁定按鈕操控
+        function bindControl(id, onCmd, offCmd) {
+            const btn = document.getElementById(id);
+            
+            // 處理按下 (支援觸控與滑鼠)
+            const handlePress = (e) => {
+                e.preventDefault();
+                sendCommand(onCmd);
+            };
+
+            // 處理放開
+            const handleRelease = (e) => {
+                e.preventDefault();
+                sendCommand(offCmd);
+            };
+
+            btn.addEventListener('pointerdown', handlePress);
+            btn.addEventListener('pointerup', handleRelease);
+            btn.addEventListener('pointerleave', handleRelease); // 防止手指滑出按鈕後沒停止
+        }
+
+        // F=前, B=後, L=左, R=右, S=停止
+        bindControl('btn-F', 'F', 'S');
+        bindControl('btn-B', 'B', 'S');
+        bindControl('btn-L', 'L', 'S');
+        bindControl('btn-R', 'R', 'S');
+
+    </script>
+</body>
+</html>
